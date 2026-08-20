@@ -30,6 +30,59 @@
     "Sarasa Term SC with Nerd icon font library patch.")
    (license license:silofl1.1)))
 
+(define-public maple-mono-default-nf-cn
+  (package
+   (name "maple-mono-default-nf-cn")
+   (version "7.9")
+   
+   (source
+    (origin
+     (method url-fetch)
+     (uri
+      (string-append
+       "https://github.com/subframe7536/maple-font/releases/download/v"
+       version
+       "/MapleMono-NF-CN-unhinted.zip"))
+     (sha256
+      (base32
+       "1b3wbgd9gngwv61ybinwxkpmyam2b7fdxxmfzvgiah6g68lm525b"))))
+   
+   (build-system font-build-system)
+   
+   (home-page "https://github.com/subframe7536/maple-font")
+   (synopsis "Maple Mono Default NF CN")
+   (description
+    "Maple Mono: Open source monospace font with round corner,
+ligatures and Nerd-Font icons for IDE and terminal,
+fine-grained customization options.")
+   (license license:silofl1.1)))
+
+(define-public maple-mono-normal-nl-nf-cn
+  (package
+   (name "maple-mono-normal-nl-nf-cn")
+   (version "7.9")
+   
+   (source
+    (origin
+     (method url-fetch)
+     (uri
+      (string-append
+       "https://github.com/subframe7536/maple-font/releases/download/v"
+       version
+       "/MapleMonoNormalNL-NF-CN-unhinted.zip"))
+     (sha256
+      (base32
+       "02vx6sqbsm11hikj7i6kmw0lbyjys12f0i5a98myzrk262zb9mhv"))))
+   
+   (build-system font-build-system)
+   
+   (home-page "https://github.com/subframe7536/maple-font")
+   (synopsis "Maple Mono Normal NL NF CN")
+   (description
+    "Maple Mono: Open source monospace font with round corner,
+ligatures and Nerd-Font icons for IDE and terminal,
+fine-grained customization options.")
+   (license license:silofl1.1)))
 
 (define-public mi-sans-global
   (package
