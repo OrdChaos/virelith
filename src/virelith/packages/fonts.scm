@@ -3,8 +3,7 @@
                #:use-module (guix download)
                #:use-module (guix gexp)
                #:use-module (guix build-system font)
-               #:use-module ((guix licenses) #:prefix license:)
-               #:use-module ((nonguix licenses) #:prefix nonguix-license:))
+               #:use-module ((guix licenses) #:prefix license:))
 
 (define-public sarasa-term-sc-nerd
   (package
