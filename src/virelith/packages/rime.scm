@@ -11,7 +11,6 @@
                #:use-module (guix build-system trivial)
                #:use-module (guix gexp)
                #:use-module (guix git-download)
-               #:use-module (guix download)
                #:use-module ((guix licenses) #:prefix license:)
                #:use-module (guix packages)
                #:use-module (guix records)
@@ -262,49 +261,17 @@ scripts, OpenCC data, and related shared data.  This package installs the data
 under @file{share/rime-data} for use as immutable Rime shared data.")
    (license license:gpl3)))
 
-;; The upstream LTS release asset is intentionally a moving URL.  A fixed hash
-;; protects a build from silently accepting changed bytes, but once upstream
-;; replaces the asset the old derivation cannot be fetched from that URL.  For
-;; long-term channel reproducibility, mirror each accepted snapshot to an
-;; immutable Virelith release URL and replace this URI with that mirror.
-(define %wanxiang-model-snapshot "2026-08-23")
-
-(define %wanxiang-gram-source
-  (origin
-   (method url-fetch)
-   (uri "https://github.com/amzxyz/RIME-LMDG/releases/download/LTS/wanxiang-lts-zh-hans.gram")
-   (sha256 (base32 "1k7f1npaj2hhfn5wzkdqxf92hr5pkrkh6ac0dk3i8wxg8g7sgz65"))))
-
-(define-public rime-wanxiang-gram-zh-hans
-  (package
-   (name "rime-wanxiang-gram-zh-hans")
-   (version %wanxiang-model-snapshot)
-   (source %wanxiang-gram-source)
-   (build-system trivial-build-system)
-   (arguments
-    (list
-     #:modules '((guix build utils))
-     #:builder
-     #~(begin
-        (use-modules (guix build utils))
-        (let ((target (string-append #$output "/share/rime-data")))
-          (mkdir-p target)
-          (copy-file #$%wanxiang-gram-source
-                     (string-append target
-                                    "/wanxiang-lts-zh-hans.gram"))))))
-   (home-page "https://github.com/amzxyz/RIME-LMDG")
-   (synopsis "Wanxiang Simplified Chinese grammar model for Rime")
-   (description
-    "This package provides the Wanxiang LTS Simplified Chinese Octagram
-language model as immutable Rime shared data.")
-   (license license:cc-by4.0)))
+;; The Wanxiang grammar model (wanxiang-lts-zh-hans.gram) is intentionally
+;; NOT packaged here: the upstream LTS release asset is a moving URL with no
+;; immutable historical addresses, so any fixed-output sha256 would break the
+;; moment upstream replaces the asset.  Consumers should fetch it as
+;; build-time online data instead (e.g. guixcfg's (guixcfg utils
+;; online-file), which drops it into the Rime user directory).
 
 (define-public rime-data-virelith
   (package
    (name "rime-data-virelith")
-   (version (string-append (package-version rime-ice)
-                           "+wanxiang-"
-                           (package-version rime-wanxiang-gram-zh-hans)))
+   (version (package-version rime-ice))
    (source #f)
    (build-system trivial-build-system)
    (arguments
@@ -318,10 +285,6 @@ language model as immutable Rime shared data.")
           (copy-recursively
            (string-append #$rime-ice "/share/rime-data")
            target)
-          (copy-file
-           (string-append #$rime-wanxiang-gram-zh-hans
-                          "/share/rime-data/wanxiang-lts-zh-hans.gram")
-           (string-append target "/wanxiang-lts-zh-hans.gram"))
           ;; fcitx5-rime expects a shared data directory.  Keep the global
           ;; default empty; user policy can include rime_ice_suggestion from
           ;; declarative default.custom.yaml later.
@@ -331,6 +294,7 @@ language model as immutable Rime shared data.")
    (home-page "https://github.com/iDvel/rime-ice")
    (synopsis "Rime shared data set for Virelith")
    (description
-    "This package composes Rime Ice and the Wanxiang Simplified Chinese
-Octagram model into one @file{share/rime-data} tree for fcitx5-rime.")
-   (license (list license:gpl3 license:cc-by4.0))))
+    "This package composes Rime Ice into one @file{share/rime-data} tree for
+fcitx5-rime.  The Wanxiang grammar model is deliberately not included; see the
+comment above for why it is not packaged.")
+   (license license:gpl3)))
