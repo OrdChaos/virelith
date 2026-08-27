@@ -9,6 +9,7 @@
                #:use-module (gnu packages lua)
                #:use-module (guix build-system copy)
                #:use-module (guix build-system trivial)
+               #:use-module (guix download)
                #:use-module (guix gexp)
                #:use-module (guix git-download)
                #:use-module ((guix licenses) #:prefix license:)
@@ -261,12 +262,46 @@ scripts, OpenCC data, and related shared data.  This package installs the data
 under @file{share/rime-data} for use as immutable Rime shared data.")
    (license license:gpl3)))
 
-;; The Wanxiang grammar model (wanxiang-lts-zh-hans.gram) is intentionally
-;; NOT packaged here: the upstream LTS release asset is a moving URL with no
-;; immutable historical addresses, so any fixed-output sha256 would break the
-;; moment upstream replaces the asset.  Consumers should fetch it as
-;; build-time online data instead (e.g. guixcfg's (guixcfg utils
-;; online-file), which drops it into the Rime user directory).
+;; The Wanxiang grammar model (wanxiang-lts-zh-hans.gram).  The upstream LTS
+;; release URL is a moving target with no immutable historical addresses, so
+;; this channel ships a versioned snapshot instead:
+;; https://github.com/OrdChaos/RIME-LMDG.snapshot/releases/tag/20260823195706
+;; The release asset is immutable per tag, so the fixed-output sha256 is
+;; stable.  Bump VERSION together with the snapshot tag when refreshing.
+(define-public rime-data-wanxiang
+  (package
+   (name "rime-data-wanxiang")
+   (version "20260823195706")
+   (source
+    (origin
+     (method url-fetch)
+     (uri
+      (string-append
+       "https://github.com/OrdChaos/RIME-LMDG.snapshot/releases/download/"
+       version "/wanxiang-lts-zh-hans.gram"))
+     (file-name "wanxiang-lts-zh-hans.gram")
+     (sha256
+      (base32 "17a6hlni31bmazjawr4l6r27gybdkwsa70jxrnjzhyv049zy7zq1"))))
+   (build-system copy-build-system)
+   (arguments
+    (list
+     ;; The release asset is a single .gram file, not an archive; the
+     ;; standard unpack phase would try to untar it.
+     #:phases
+     #~(modify-phases %standard-phases
+         (replace 'unpack
+                  (lambda* (#:key source #:allow-other-keys)
+                           (copy-file source "wanxiang-lts-zh-hans.gram"))))
+     #:install-plan
+     #~'(("wanxiang-lts-zh-hans.gram" "share/rime-data/"))))
+   (home-page "https://github.com/OrdChaos/RIME-LMDG.snapshot")
+   (synopsis "Wanxiang LTS Chinese language model for Rime")
+   (description
+    "The Wanxiang (万象) LTS grammar model for Simplified Chinese Rime
+input, @file{wanxiang-lts-zh-hans.gram}, packaged from a versioned snapshot
+release.  The file is installed under @file{share/rime-data} for use as
+immutable Rime shared data; enable the model per-schema at runtime.")
+   (license license:cc-by4.0)))
 
 (define-public rime-data-virelith
   (package
@@ -295,6 +330,6 @@ under @file{share/rime-data} for use as immutable Rime shared data.")
    (synopsis "Rime shared data set for Virelith")
    (description
     "This package composes Rime Ice into one @file{share/rime-data} tree for
-fcitx5-rime.  The Wanxiang grammar model is deliberately not included; see the
-comment above for why it is not packaged.")
+fcitx5-rime.  The Wanxiang grammar model is packaged separately as
+@code{rime-data-wanxiang}.")
    (license license:gpl3)))
