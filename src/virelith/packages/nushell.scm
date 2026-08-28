@@ -14,21 +14,25 @@
   #:use-module (guix download)
   #:use-module (guix gexp)
   #:use-module (guix packages)
-  #:use-module (nonguix build-system binary)
-  #:use-module ((guix licenses) #:prefix license:))
+  #:use-module ((guix licenses) #:prefix license:)
+  #:use-module (nonguix build-system binary))
+
+;; Bump VERSION/SHA256 together when updating the package.
+(define %nushell-version "0.115.1")
+(define %nushell-sha256
+  (base32 "1c6qp4spdd3867xijyvdr04x1mlxb9rgldf52wv4ll7n859847fi"))
 
 (define-public nushell
   (package
     (name "nushell")
-    (version "0.115.1")
+    (version %nushell-version)
     (source
      (origin
        (method url-fetch)
        (uri (string-append
              "https://github.com/nushell/nushell/releases/download/"
              version "/nu-" version "-x86_64-unknown-linux-gnu.tar.gz"))
-       (sha256
-        (base32 "1c6qp4spdd3867xijyvdr04x1mlxb9rgldf52wv4ll7n859847fi"))))
+       (sha256 %nushell-sha256)))
     (build-system binary-build-system)
     (arguments
      (list

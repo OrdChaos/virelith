@@ -18,17 +18,23 @@
 (define-module (virelith packages vscode)
   #:use-module (gnu packages base)
   #:use-module (gnu packages gtk)
-  #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix gexp)
+  #:use-module (guix packages)
+  #:use-module ((guix licenses) #:prefix license:)
   #:use-module (nonguix build-system chromium-binary)
   #:use-module (nonguix licenses)
   #:use-module (ice-9 match))
 
+;; Bump VERSION/SHA256 together when updating the package.
+(define %vscode-version "1.134.0")
+(define %vscode-sha256
+  (base32 "0cvpyfaabglpc0g7xblc7syhdnr0n13rklyscb5g29zmg401fdlk"))
+
 (define-public vscode
   (package
     (name "vscode")
-    (version "1.134.0")
+    (version %vscode-version)
     (source
      (origin
        (method url-fetch)
@@ -36,8 +42,7 @@
              "https://update.code.visualstudio.com/"
              version "/linux-x64/stable"))
        (file-name (string-append name "-" version ".tar.gz"))
-       (sha256
-        (base32 "0cvpyfaabglpc0g7xblc7syhdnr0n13rklyscb5g29zmg401fdlk"))))
+       (sha256 %vscode-sha256)))
     (build-system chromium-binary-build-system)
     (arguments
      (list

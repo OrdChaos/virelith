@@ -1,8 +1,14 @@
+;;; Elogind packages for Virelith.
+
 (define-module (virelith packages elogind)
                #:use-module (gnu packages freedesktop)
-               #:use-module (guix packages)
-               #:use-module (guix git-download))
+               #:use-module (guix git-download)
+               #:use-module (guix packages))
 
+;; Bump VERSION/SHA256 together when updating the package.
+(define %elogind-compat-version "257.16")
+(define %elogind-compat-sha256
+  (base32 "0sbggvmc3ni5pp5ybmxi0mxxgkyl84d539jsb6nf9qwqvxming8j"))
 
 ;; 项目需要比当前 GNU Guix 主线更新的 elogind（255 系列 → 257 系列）。
 ;;
@@ -14,19 +20,17 @@
 ;; source——版本间如有构建问题，应在实际构建后按证据最小修改。
 (define-public elogind-compat
   (package
-   (inherit elogind)
-   (name "elogind-compat")
-   (version "257.16")
+    (inherit elogind)
+    (name "elogind-compat")
+    (version %elogind-compat-version)
 
-   ;; 上游 tag 从 V255.22 之后改为小写 v 前缀（v257.16）。
-   (source
-    (origin
-     (method git-fetch)
-     (uri
-      (git-reference
-       (url "https://github.com/elogind/elogind")
-       (commit (string-append "v" version))))
-     (file-name (git-file-name name version))
-     (sha256
-      (base32
-       "0sbggvmc3ni5pp5ybmxi0mxxgkyl84d539jsb6nf9qwqvxming8j"))))))
+    ;; 上游 tag 从 V255.22 之后改为小写 v 前缀（v257.16）。
+    (source
+     (origin
+       (method git-fetch)
+       (uri
+        (git-reference
+         (url "https://github.com/elogind/elogind")
+         (commit (string-append "v" version))))
+       (file-name (git-file-name name version))
+       (sha256 %elogind-compat-sha256)))))
