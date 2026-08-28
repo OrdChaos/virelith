@@ -176,9 +176,19 @@ on, which avoids depending on frontend support for RimeTraits.plugins_dir.
                                                      "-DENABLE_LOGGING=OFF")
                                                #$flags))
                                            ((#:phases phases #~%standard-phases)
+                                            ;; The computed-file source already places the
+                                            ;; pinned plugins under plugins/<name>; the
+                                            ;; inherited Guix 'install-plugins phase would
+                                            ;; additionally copy Guix's own librime-lua into
+                                            ;; plugins/lua, producing a duplicate
+                                            ;; rime-lua-objs target at configure time (cmake
+                                            ;; 3.31+ treats duplicate target names as an
+                                            ;; error).
                                             (if (null? pkg-config-aliases)
-                                              phases
                                               #~(modify-phases #$phases
+                                                               (delete 'install-plugins))
+                                              #~(modify-phases #$phases
+                                                               (delete 'install-plugins)
                                                                (add-before 'configure 'prepare-plugin-pkg-config
                                                                            (lambda _
                                                                              (let ((directory
