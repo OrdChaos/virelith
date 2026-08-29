@@ -84,7 +84,7 @@
   #:use-module (gnu packages gnome)           ; libnotify
   #:use-module (gnu packages gstreamer)       ; gstreamer, gst-plugins-base/good
   #:use-module (gnu packages gtk)             ; gtk+, pango, cairo, at-spi2-core
-  #:use-module (gnu packages linux)           ; alsa-lib, libdrm
+  #:use-module (gnu packages linux)           ; alsa-lib, libdrm, eudev
   #:use-module (gnu packages nss)             ; nss, nspr
   #:use-module (gnu packages pulseaudio)      ; pulseaudio
   #:use-module (gnu packages xdisorg)         ; libxkbcommon
@@ -116,8 +116,17 @@
 ;; follow package names which change across Guix revisions (e.g.
 ;; fontconfig is a hidden package named "fontconfig-minimal").  nss is
 ;; handled separately: its shared objects live under lib/nss.
+;;
+;; dlopen-by-name exception: Chromium's device::UdevLoader dlopens
+;; "libudev.so.1" (and the legacy "libudev.so.0") without an FHS
+;; fallback; when neither resolves, its fallback SystemUdevLoader also
+;; fails and UdevLoader::Get() CHECK-crashes with SIGTRAP at startup
+;; (reproduced; verified via LD_LIBRARY_PATH bisect).  dlopen consults
+;; the caller's RUNPATH, so eudev joins the list purely to expose
+;; libudev through the store RUNPATH — it is not a DT_NEEDED member.
 (define %runtime-lib-packages
   (list glib
+        eudev
         libx11
         libxcb
         libxext
