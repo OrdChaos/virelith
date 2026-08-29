@@ -291,7 +291,15 @@
                    (string-append "Exec=" bin))
                   (("^Icon=onlyoffice-desktopeditors")
                    (string-append "Icon=onlyoffice-desktopeditors\n"
-                                  "TryExec=" bin)))))))))
+                                  "TryExec=" bin)))
+                ;; binary-build-system's install-plan copies single files
+                ;; with copy-file, which does not preserve the source's
+                ;; mode: the upstream launcher arrives without its
+                ;; executable bit and both direct invocation and the
+                ;; desktop Exec fail with "command not found"/exec error.
+                ;; Restore 0755.  Removal condition: upstream
+                ;; binary-build-system's file copy preserving modes.
+                (chmod bin #o755)))))))
     (supported-systems '("x86_64-linux"))
     (inputs
      (list (list gcc "lib")                ; libstdc++.so.6, libgcc_s.so.1
