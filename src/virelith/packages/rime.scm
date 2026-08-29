@@ -293,12 +293,12 @@ under @file{share/rime-data} for use as immutable Rime shared data.")
 ;; The Wanxiang grammar model (wanxiang-lts-zh-hans.gram).  The upstream LTS
 ;; release URL is a moving target with no immutable historical addresses, so
 ;; this channel ships a versioned snapshot instead:
-;; https://github.com/OrdChaos/RIME-LMDG.snapshot/releases/tag/20260823195706
+;; https://github.com/OrdChaos/RIME-LMDG.snapshot/releases/tag/<version>
 ;; The release asset is immutable per tag, so the fixed-output sha256 is
 ;; stable.  Bump VERSION/SHA256 together with the snapshot tag when refreshing.
-(define %rime-data-wanxiang-version "20260823195706")
+(define %rime-data-wanxiang-version "20260829000040")
 (define %rime-data-wanxiang-sha256
-  (base32 "17a6hlni31bmazjawr4l6r27gybdkwsa70jxrnjzhyv049zy7zq1"))
+  (base32 "00kix17d44hzd0r50a2iaanvshs7jifdc5dbcip42g38pbhvnm25"))
 
 (define-public rime-data-wanxiang
   (package
