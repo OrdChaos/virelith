@@ -37,6 +37,15 @@
 ;;; Runtime integration: the launcher wrapper only sets what the
 ;;;   application needs to run under niri + xwayland-satellite:
 ;;;   - QT_QPA_PLATFORM=xcb: upstream binary is an X11/XCB application;
+;;;   - FONTCONFIG_FILE: an early fontconfig call inside the bundle
+;;;     resolves the default config before FcInit establishes the
+;;;     current config, fails with "Cannot load default config file:
+;;;     No such file: (null)" (deterministically reproduced at every
+;;;     launch), and leaves that early init config-less.  The wrapper
+;;;     points FONTCONFIG_FILE at the store fontconfig's own config so
+;;;     every init path resolves; the user config chain
+;;;     (conf.d/50-user.conf -> ~/.config/fontconfig/fonts.conf) is
+;;;     still loaded from there (verified with FC_DEBUG).
 ;;;   - GST_PLUGIN_SYSTEM_PATH/GST_PLUGIN_SCANNER: QtMultimedia uses the
 ;;;     GStreamer backend for embedded media playback; the plugin scanner
 ;;;     must not probe FHS paths;
@@ -45,10 +54,17 @@
 ;;;   Input-method variables are deliberately not set: the session's
 ;;;   XMODIFIERS/fcitx5 configuration is inherited as-is.
 ;;;
+;;; Known cosmetic warning (no fix in the package): DesktopEditors logs
+;;;   "gtk_disable_setlocale() must be called before gtk_init()" — the
+;;;   application's own GTK init order (gtk_disable_setlocale called
+;;;   after gtk_init); upstream behavior, harmless, removal condition is
+;;;   upstream fixing their init order.
+;;;
 ;;; Fonts: 9.4.0 no longer ships CUSTOM_FONTS_PATH.  Document fonts flow
 ;;; through fontconfig (used by the core and by CEF's embedded config,
-;;; which scans XDG_DATA_DIRS) — no font environment is constructed in
-;;; the wrapper; bundled Office-compatible fonts (Carlito, Caladea,
+;;; which scans XDG_DATA_DIRS); the wrapper only sets FONTCONFIG_FILE
+;;; (see the runtime-integration note above), no font dir/search-path
+;;; variables.  Bundled Office-compatible fonts (Carlito, Caladea,
 ;;; OpenSans) live in the bundle's fonts/ directory.
 ;;;
 ;;; Persistence (~/.config/onlyoffice, ~/.local/share/onlyoffice) and
@@ -268,6 +284,10 @@
                    (string-append
                     "APP_PATH=" out "/lib/onlyoffice/desktopeditors\n"
                     "export QT_QPA_PLATFORM=xcb\n"
+                    ;; See the FONTCONFIG_FILE note in the header.
+                    "export FONTCONFIG_FILE="
+                    #$(file-append fontconfig "/etc/fonts/fonts.conf")
+                    "\n"
                     "export GST_PLUGIN_SYSTEM_PATH="
                     #$(file-append gst-plugins-base "/lib/gstreamer-1.0")
                     ":"
