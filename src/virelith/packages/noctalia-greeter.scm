@@ -31,29 +31,6 @@
 ;;;   FHS /usr/share path; the exec is rewritten to resolve relative to
 ;;;   the script's own directory, mirroring upstream's session-script
 ;;;   design.
-;;; The compositor patches under patches/ (2026-08-29, not upstream yet):
-;;; - noctalia-greeter-cursor-teardown.patch: the compositor's shutdown path
-;;;   relies on wl_display_destroy(), which frees Wayland globals without
-;;;   running their destructors, so the wlroots DRM backend never commits
-;;;   the cursor/primary plane disable.  The hardware cursor plane then
-;;;   survives the compositor handoff as a stale "ghost" cursor for the
-;;;   next compositor on the seat (observed as a leftover inverted arrow
-;;;   after logging into niri, moving together with niri's cursor).  The
-;;;   patch disables outputs and the backend explicitly before display
-;;;   destruction; upstream fix to be proposed separately.
-;;; - noctalia-greeter-cursor-orientation.patch: on displays whose
-;;;   effective orientation (synced session transform composed with the
-;;;   connector panel orientation) is non-normal, the wlroots 0.20
-;;;   hardware cursor is not rotated to match the display (observed as an
-;;;   upside-down greeter cursor while the rest of the UI renders
-;;;   correctly).  The patch locks software cursors for such outputs only;
-;;;   normal-orientation outputs keep the hardware cursor.
-;;;
-;;; These are shipped as patch files (applied by `patch' at unpack time)
-;;; rather than substitute* phases: substitute* matches line-by-line, so a
-;;; multi-line pattern never matches, and it does not raise on a
-;;; non-matching pattern either — a previous substitute*-based version of
-;;; these fixes silently applied nothing while the build succeeded.
 
 (define-module (virelith packages noctalia-greeter)
                #:use-module (gnu packages cpp)             ; nlohmann-json, tomlplusplus
@@ -92,12 +69,7 @@
              (url "https://github.com/noctalia-dev/noctalia-greeter")
              (commit %noctalia-greeter-commit))) ; tag v1.2.1
        (file-name (git-file-name name version))
-       (sha256 %noctalia-greeter-sha256)
-       ;; See the header comment for what these fix.  Patch files fail
-       ;; loudly when they no longer apply, unlike substitute*.
-       (patches
-        (list (local-file "patches/noctalia-greeter-cursor-teardown.patch")
-              (local-file "patches/noctalia-greeter-cursor-orientation.patch")))))
+       (sha256 %noctalia-greeter-sha256)))
     (build-system meson-build-system)
     (arguments
      (list
