@@ -31,6 +31,23 @@
 ;;;   FHS /usr/share path; the exec is rewritten to resolve relative to
 ;;;   the script's own directory, mirroring upstream's session-script
 ;;;   design.
+;;; - fix-compositor-cursor-teardown (2026-08-29, not upstream yet): the
+;;;   compositor's shutdown path relies on wl_display_destroy(), which
+;;;   frees Wayland globals without running their destructors, so the
+;;;   wlroots DRM backend never commits the cursor/primary plane disable.
+;;;   The hardware cursor plane then survives the compositor handoff as a
+;;;   stale "ghost" cursor for the next compositor on the seat (observed
+;;;   as a leftover inverted arrow after logging into niri, moving
+;;;   together with niri's cursor).  The phase disables outputs and the
+;;;   backend explicitly before display destruction; upstream fix to be
+;;;   proposed separately.
+;;; - fix-compositor-cursor-orientation (2026-08-29, not upstream yet):
+;;;   on displays whose effective orientation (synced session transform
+;;;   composed with the connector panel orientation) is non-normal, the
+;;;   wlroots 0.20 hardware cursor is not rotated to match the display
+;;;   (observed as an upside-down greeter cursor while the rest of the
+;;;   UI renders correctly).  The phase locks software cursors for such
+;;;   outputs only; normal-orientation outputs keep the hardware cursor.
 
 (define-module (virelith packages noctalia-greeter)
                #:use-module (gnu packages cpp)             ; nlohmann-json, tomlplusplus
@@ -94,7 +111,80 @@
               ;; (unquoted expansion: store paths contain no whitespace)
               (substitute* "scripts/noctalia-greeter-print-greetd-config"
                 (("exec /usr/share/noctalia-greeter/print_greetd_config.sh")
-                 "exec ${0%/*}/../share/noctalia-greeter/print_greetd_config.sh")))))))
+                 "exec ${0%/*}/../share/noctalia-greeter/print_greetd_config.sh"))))
+          (add-after 'prepare-for-build 'fix-compositor-cursor-teardown
+            (lambda _
+              ;; Disable all outputs (and the DRM backend) before the
+              ;; Wayland display is destroyed at compositor exit.
+              ;;
+              ;; Upstream's shutdown path only calls wl_display_destroy(),
+              ;; which frees the global list without running the globals'
+              ;; destructors (libwayland), so wlroots' wlr_output_destroy →
+              ;; dealloc_crtc() never runs and the DRM backend never issues
+              ;; its final atomic commit disabling the primary/cursor
+              ;; planes.  The hardware cursor plane therefore stays enabled
+              ;; in KMS state across the compositor handoff: the next
+              ;; compositor on the seat (e.g. niri) starts over a stale
+              ;; "ghost" cursor showing the greeter's last cursor image.
+              ;; Destroying the outputs explicitly triggers the plane
+              ;; disable commit; destroying the backend releases the
+              ;; session cleanly.  (The greeter session is still active at
+              ;; this point, so the logind seat permits the commit.)
+              (substitute* "src/compositor/noctalia_compositor.c"
+                (("  wl_display_destroy\\(server\\.display\\);\n  return 0;\n}"
+                  _ tail)
+                 (string-append
+                  "  /* Teardown: disable all outputs before destroying the\n"
+                  "   * display.  wl_display_destroy() frees globals without\n"
+                  "   * running their destructors, so without this the DRM\n"
+                  "   * backend never commits the cursor-plane disable and the\n"
+                  "   * hardware cursor survives this compositor (\"ghost\n"
+                  "   * cursor\" for the next compositor on the seat). */\n"
+                  "  struct greeter_output* output;\n"
+                  "  struct greeter_output* output_tmp;\n"
+                  "  wl_list_for_each_safe(output, output_tmp, &server.outputs, link) {\n"
+                  "    wlr_output_destroy(output->wlr_output);\n"
+                  "  }\n"
+                  "  wlr_backend_destroy(server.backend);\n"
+                  tail)))))
+          (add-after 'fix-compositor-cursor-teardown 'fix-compositor-cursor-orientation
+            (lambda _
+              ;; Lock software cursors on outputs whose effective
+              ;; orientation is non-normal.
+              ;;
+              ;; wlroots 0.20 renders the hardware cursor buffer without
+              ;; accounting for the connector's panel orientation, and on
+              ;; some panels the DRM cursor plane does not receive the
+              ;; rotation that the primary content gets.  The result is an
+              ;; upside-down (or otherwise rotated) cursor image while the
+              ;; rest of the greeter renders correctly — the software
+              ;; cursor path is drawn into the properly rotated frame and
+              ;; is unaffected.  Compose the synced session transform with
+              ;; the connector panel orientation; when the effective
+              ;; orientation is non-normal, force the software cursor for
+              ;; that output only.  Outputs with a normal orientation keep
+              ;; the hardware cursor.
+              (substitute* "src/compositor/noctalia_compositor.c"
+                (("#include <wlr/backend.h>\n#include <wlr/backend/libinput.h>"
+                  _ includes)
+                 (string-append
+                  includes "\n"
+                  "#include <wlr/backend/drm.h>"))
+                (("  const enum wl_output_transform transform = transform_for_output\\(server, output->wlr_output->name\\);\n  wlr_output_state_set_transform\\(&state, transform\\);"
+                  _ block)
+                 (string-append
+                  block "\n"
+                  "  {\n"
+                  "    enum wl_output_transform effective = transform;\n"
+                  "    enum wl_output_transform panel =\n"
+                  "        wlr_drm_connector_get_panel_orientation(output->wlr_output);\n"
+                  "    if (panel != WL_OUTPUT_TRANSFORM_NORMAL) {\n"
+                  "      effective = wlr_output_transform_compose(effective, panel);\n"
+                  "    }\n"
+                  "    if (effective != WL_OUTPUT_TRANSFORM_NORMAL) {\n"
+                  "      wlr_output_lock_software_cursors(output->wlr_output, true);\n"
+                  "    }\n"
+                  "  }\n"))))))))
     (native-inputs
      (list pkg-config))
     (inputs
