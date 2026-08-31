@@ -43,9 +43,11 @@
 ;;;     No such file: (null)" (deterministically reproduced at every
 ;;;     launch), and leaves that early init config-less.  The wrapper
 ;;;     points FONTCONFIG_FILE at the store fontconfig's own config so
-;;;     every init path resolves; the user config chain
-;;;     (conf.d/50-user.conf -> ~/.config/fontconfig/fonts.conf) is
-;;;     still loaded from there (verified with FC_DEBUG).
+;;;     every init path resolves.  The export is a soft default
+;;;     (${FONTCONFIG_FILE:-...}): a deployment layer may pre-set a
+;;;     config with equivalent dirs plus application-scoped inline
+;;;     policy (ONLYOFFICE does not apply included conf.d/user rules;
+;;;     inline rules in FONTCONFIG_FILE are applied).
 ;;;   - GST_PLUGIN_SYSTEM_PATH/GST_PLUGIN_SCANNER: QtMultimedia uses the
 ;;;     GStreamer backend for embedded media playback; the plugin scanner
 ;;;     must not probe FHS paths;
@@ -294,9 +296,9 @@
                     "APP_PATH=" out "/lib/onlyoffice/desktopeditors\n"
                     "export QT_QPA_PLATFORM=xcb\n"
                     ;; See the FONTCONFIG_FILE note in the header.
-                    "export FONTCONFIG_FILE="
+                    "export FONTCONFIG_FILE=\"${FONTCONFIG_FILE:-"
                     #$(file-append fontconfig "/etc/fonts/fonts.conf")
-                    "\n"
+                    "}\"\n"
                     "export GST_PLUGIN_SYSTEM_PATH="
                     #$(file-append gst-plugins-base "/lib/gstreamer-1.0")
                     ":"
