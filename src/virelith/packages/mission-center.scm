@@ -27,11 +27,17 @@
 ;;;   both assumes a non-Guix FHS layout and is unsafe on a shared /tmp.  The
 ;;;   GUI exposes the dialog only when the backend reports a script name; the
 ;;;   backend returns None for it here, so the dialog never appears.
-;;; - The "Services" page is hidden entirely: Guix runs shepherd, not
-;;;   systemd, so the backend always reports an empty service list; upstream
-;;;   nonetheless keeps the page visible for the first five refreshes.  The
-;;;   empty-list grace counter in src/window.rs is zeroed so the page (and
-;;;   its bottom tab) never appears.
+;;; - The "Services" page is hidden: Guix runs shepherd, not systemd, so
+;;;   the backend always reports an empty service list.  Upstream shows the
+;;;   page (and its view-switcher tab) by default and keeps it visible for
+;;;   the first few refreshes through a grace counter.  Zeroing that counter
+;;;   alone still leaves a startup flash: the page is visible from window
+;;;   construction until the first readings update.  Two patches remove both
+;;;   sources of visibility: the page is declared `visible: false` in
+;;;   resources/ui/window.blp (no flash), and the grace counter maximum is 1
+;;;   so the first increment (0 -> 1) already disables the grace period
+;;;   (the tab never reappears for an empty list; a non-empty list would
+;;;   still show the page).
 
 (define-module (virelith packages mission-center)
   #:use-module (virelith packages libadwaita)
@@ -164,16 +170,26 @@
                  (string-append "\"" #$output
                                 "/bin/missioncenter-magpie\"")))
 
-              ;; Never show the "Services" page: Guix runs shepherd, not
-              ;; systemd, so the backend always reports an empty service
-              ;; list; upstream nonetheless keeps the page (and its bottom
-              ;; ViewSwitcherBar tab) visible for the first five refreshes
-              ;; (src/window.rs update_services).  Zeroing the empty-list
-              ;; grace counter makes visibility depend only on the real
-              ;; service list, so the tab never appears.
+              ;; Never show the "Services" page (Guix runs shepherd, not
+              ;; systemd, so the service list is always empty).  Two
+              ;; independent sources of visibility must go:
+              ;;   1. resources/ui/window.blp declares the page visible by
+              ;;      default, so it flashes from window construction until
+              ;;      the first readings update -- declare it hidden;
+              ;;   2. src/window.rs keeps an empty-list grace counter that
+              ;;      re-shows the page for the first few refreshes -- set
+              ;;      the maximum to 1 so the first increment (0 -> 1)
+              ;;      already disables it.  (Zero would make the
+              ;;      `counter < MAX` comparison always false, an
+              ;;      unused-comparison warning.)
+              (substitute* "resources/ui/window.blp"
+                (("Adw.ViewStackPage services_stack_page \\{")
+                 (string-append
+                  "Adw.ViewStackPage services_stack_page {\n"
+                  "                        visible: false;")))
               (substitute* "src/window.rs"
                 (("SERVICES_REFRESH_COUNTER_MAX_FOR_EMPTY_LIST: u8 = 5;")
-                 "SERVICES_REFRESH_COUNTER_MAX_FOR_EMPTY_LIST: u8 = 0;"))))
+                 "SERVICES_REFRESH_COUNTER_MAX_FOR_EMPTY_LIST: u8 = 1;"))))
 
           (add-after 'patch-source-shebangs 'unpack-cargo-vendor
             (lambda* (#:key inputs #:allow-other-keys)
