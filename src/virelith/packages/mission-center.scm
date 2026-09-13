@@ -27,6 +27,11 @@
 ;;;   both assumes a non-Guix FHS layout and is unsafe on a shared /tmp.  The
 ;;;   GUI exposes the dialog only when the backend reports a script name; the
 ;;;   backend returns None for it here, so the dialog never appears.
+;;; - The "Services" page is hidden entirely: Guix runs shepherd, not
+;;;   systemd, so the backend always reports an empty service list; upstream
+;;;   nonetheless keeps the page visible for the first five refreshes.  The
+;;;   empty-list grace counter in src/window.rs is zeroed so the page (and
+;;;   its bottom tab) never appears.
 
 (define-module (virelith packages mission-center)
   #:use-module (virelith packages libadwaita)
@@ -157,7 +162,18 @@
               (substitute* "src/magpie_client/client.rs"
                 (("\"missioncenter-magpie\"")
                  (string-append "\"" #$output
-                                "/bin/missioncenter-magpie\"")))))
+                                "/bin/missioncenter-magpie\"")))
+
+              ;; Never show the "Services" page: Guix runs shepherd, not
+              ;; systemd, so the backend always reports an empty service
+              ;; list; upstream nonetheless keeps the page (and its bottom
+              ;; ViewSwitcherBar tab) visible for the first five refreshes
+              ;; (src/window.rs update_services).  Zeroing the empty-list
+              ;; grace counter makes visibility depend only on the real
+              ;; service list, so the tab never appears.
+              (substitute* "src/window.rs"
+                (("SERVICES_REFRESH_COUNTER_MAX_FOR_EMPTY_LIST: u8 = 5;")
+                 "SERVICES_REFRESH_COUNTER_MAX_FOR_EMPTY_LIST: u8 = 0;"))))
 
           (add-after 'patch-source-shebangs 'unpack-cargo-vendor
             (lambda* (#:key inputs #:allow-other-keys)
