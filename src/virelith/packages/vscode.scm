@@ -17,6 +17,7 @@
 
 (define-module (virelith packages vscode)
   #:use-module (gnu packages base)
+  #:use-module (gnu packages bash)
   #:use-module (gnu packages gtk)
   #:use-module (guix download)
   #:use-module (guix gexp)
@@ -66,13 +67,35 @@
               (mkdir-p "opt/vscode")
               (invoke "tar" "-xvf" source "-C" "opt/vscode")))
           (add-before 'install-wrapper 'install-entrypoint
-            (lambda _
-              (let* ((bin (string-append #$output "/bin")))
-                (delete-file (string-append #$output "/environment-variables"))
-                (mkdir-p bin)
-                (symlink (string-append #$output
-                                        "/opt/vscode/VSCode-linux-x64/code")
-                         (string-append bin "/code")))))
+             (lambda _
+               (let* ((bin (string-append #$output "/bin")))
+                 (delete-file (string-append #$output "/environment-variables"))
+                 (mkdir-p bin)
+                 (symlink (string-append #$output
+                                         "/opt/vscode/VSCode-linux-x64/code")
+                          (string-append bin "/code")))))
+          ;; The upstream launcher directly execs Electron, which keeps an
+          ;; interactive shell occupied and sends GUI diagnostics to it.
+          ;; Retain Nonguix's generated runtime wrapper as the private real
+          ;; entry point, then expose a CLI launcher that returns after GUI
+          ;; startup.  --wait remains synchronous for editor integrations.
+          (add-after 'install-wrapper 'install-cli-launcher
+             (lambda _
+               (let* ((bin (string-append #$output "/bin"))
+                      (code (string-append bin "/code"))
+                      (real (string-append bin "/.code-real")))
+                 (rename-file code real)
+                 (call-with-output-file
+                     code
+                   (lambda (port)
+                     (format port "#!~a~%"
+                             #$(file-append bash-minimal "/bin/sh"))
+                     (display "for argument in \"$@\"; do\n" port)
+                     (format port "  [ \"$argument\" = --wait ] && exec '~a' \"$@\"\n"
+                             real)
+                     (display "done\n" port)
+                     (format port "'~a' \"$@\" >/dev/null 2>&1 &\n" real)))
+                 (chmod code #o555))))
           (add-after 'install-entrypoint 'install-resources
             (lambda _
               (let* ((icons
