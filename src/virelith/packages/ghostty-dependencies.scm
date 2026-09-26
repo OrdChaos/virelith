@@ -4,12 +4,14 @@
   #:use-module (guix download)
   #:use-module (guix git-download)
   #:use-module (guix packages)
+  #:use-module (ice-9 ftw)
   #:export (ghostty-zig-dependencies))
 
 (define (source url hash)
   (origin
     (method url-fetch)
     (uri url)
+    (file-name (basename url))
     (sha256 (base32 hash))))
 
 (define ghostty-zig-dependencies

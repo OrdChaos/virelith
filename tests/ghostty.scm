@@ -20,7 +20,7 @@
 (test-assert "dependency origins are direct inputs"
   (let ((inputs (package-inputs ghostty)))
     (every (lambda (dependency)
-             (assoc (car dependency) inputs))
+             (assoc (origin-file-name (cdr dependency)) inputs))
            ghostty-zig-dependencies)))
 
 (test-end "ghostty")

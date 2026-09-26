@@ -97,8 +97,13 @@
                       (invoke "tar" "-xf" source "-C" directory
                               "--strip-components=1"))
                      (else (copy-recursively source directory))))))
-                (map (lambda (name) (cons name (assoc-ref inputs name)))
-                    '#$(map car ghostty-zig-dependencies)))))))
+               (map (lambda (dependency)
+                      (cons (car dependency)
+                            (assoc-ref inputs (cdr dependency))))
+                    '#$(map (lambda (dependency)
+                              (cons (car dependency)
+                                    (origin-file-name (cdr dependency))))
+                            ghostty-zig-dependencies)))))))
       )
     (native-inputs
      (list `(,glib "bin")
@@ -110,9 +115,7 @@
            pkg-config
            tar))
     (inputs
-     (append (map (lambda (dependency)
-                    (list (car dependency) (cdr dependency)))
-                  ghostty-zig-dependencies)
+     (append (map cdr ghostty-zig-dependencies)
              (list bzip2 expat fontconfig freetype glslang gtk4-layer-shell
                    harfbuzz libadwaita libglvnd libpng libx11 libxcursor libxi
                    libxrandr zlib)))
