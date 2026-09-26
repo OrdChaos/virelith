@@ -3,6 +3,7 @@
 (define-module (virelith packages ghostty-dependencies)
   #:use-module (guix download)
   #:use-module (guix git-download)
+  #:use-module (guix packages)
   #:export (ghostty-zig-dependencies))
 
 (define (source url hash)

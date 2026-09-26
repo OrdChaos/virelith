@@ -97,8 +97,9 @@
                       (invoke "tar" "-xf" source "-C" directory
                               "--strip-components=1"))
                      (else (copy-recursively source directory))))))
-               (map (lambda (name) (cons name (assoc-ref inputs name)))
+                (map (lambda (name) (cons name (assoc-ref inputs name)))
                     '#$(map car ghostty-zig-dependencies)))))))
+      )
     (native-inputs
      (list `(,glib "bin")
            blueprint-compiler
