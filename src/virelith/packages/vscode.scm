@@ -28,9 +28,9 @@
   #:use-module (ice-9 match))
 
 ;; Bump VERSION/SHA256 together when updating the package.
-(define %vscode-version "1.134.0")
+(define %vscode-version "1.139.1")
 (define %vscode-sha256
-  (base32 "0cvpyfaabglpc0g7xblc7syhdnr0n13rklyscb5g29zmg401fdlk"))
+  (base32 "0ziva0bwbxiijx6ndnlaywr8w3x807p8ziz55p30z6hf0zmbr70c"))
 
 (define-public vscode
   (package

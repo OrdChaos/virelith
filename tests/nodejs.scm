@@ -17,7 +17,7 @@
 (test-assert "pnpm: package shape"
              (and (package? pnpm)
                   (string=? "pnpm" (package-name pnpm))
-                  (string=? "11.21.0" (package-version pnpm))
+                  (string=? "11.28.0" (package-version pnpm))
                   (eq? (quote binary) (build-system-name (package-build-system pnpm)))
                   (string=? "https://pnpm.io" (package-home-page pnpm))
                   (string=? "Expat" (license:license-name (package-license pnpm)))))

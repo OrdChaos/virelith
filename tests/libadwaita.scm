@@ -33,7 +33,7 @@
 (test-group "libadwaita-1.9"
   (test-equal "package name" "libadwaita"
     (package-name libadwaita-1.9))
-  (test-equal "version 1.9.3" "1.9.3"
+  (test-equal "version 1.9.4" "1.9.4"
     (package-version libadwaita-1.9))
   (test-assert "meson build system"
     (eq? meson-build-system (package-build-system libadwaita-1.9)))

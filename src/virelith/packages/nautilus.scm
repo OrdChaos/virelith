@@ -18,14 +18,13 @@
 ;;;   nautilus-python bindings (grep of gnu/packages: only
 ;;;   python-nautilus-sampler, unrelated). Both are therefore packaged
 ;;;   here.
-;;; - python-nautilus (upstream nautilus-python) 4.1.0: meson,
+;;; - python-nautilus (upstream nautilus-python) 4.2.0: meson,
 ;;;   dependencies pygobject-3.0 + libnautilus-extension-4 (>= 43.beta,
 ;;;   provided by the nautilus package) + gmodule-2.0 + python3 embed.
 ;;;   No gir build tools needed (src/meson.build compiles only the
 ;;;   extension .so, installed into nautilus's extensiondir; the Nautilus
-;;;   typelib comes from the nautilus package). Upstream has no modern
-;;;   release tags (only ancient 1.x), so the pinned commit is the
-;;;   "Release 4.1.0" commit on master.
+;;;   typelib comes from the nautilus package). The commit is the peeled
+;;;   4.2.0 release tag.
 ;;; - nautilus-open-any-terminal 0.8.3: setuptools (scm) install with a
 ;;;   custom install command that places the extension .py under
 ;;;   share/nautilus-python/extensions (found via XDG_DATA_DIRS by
@@ -53,9 +52,9 @@
                #:export (python-nautilus
                          nautilus-open-any-terminal))
 
-(define %nautilus-python-version "4.1.0")
+(define %nautilus-python-version "4.2.0")
 (define %nautilus-python-commit
-  "52fe5a0339065aa5461075c53002b1534b590188") ; master "Release 4.1.0"
+  "17e7edf4d01bc43d0d550c5013d45659ac752cab") ; tag 4.2.0
 
 (define-public python-nautilus
   (package
@@ -69,7 +68,7 @@
              (commit %nautilus-python-commit)))
        (file-name (git-file-name name version))
        (sha256
-        (base32 "1wj27hkbgp7l8hda794jxn16vk57lwknf2qv69whbl46p72zlhav"))))
+        (base32 "1fzbxzpqkdl5ihwdzfzip9hzl0pj8f8hr70iksw9zzliqc4mahda"))))
     (build-system meson-build-system)
     (arguments
      (list #:glib-or-gtk? #t))

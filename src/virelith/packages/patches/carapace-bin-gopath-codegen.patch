@@ -1,0 +1,86 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Virelith <virelith@localhost>
+Date: Mon, 28 Sep 2026 00:00:00 +0000
+Subject: [PATCH] completer: derive the module path from GOPATH
+
+carapace-generate resolves the module import prefix by running
+`go mod edit -json'.  Guix's go-build-system builds in GOPATH mode
+(GO111MODULE=off), where `go mod edit' fails and generate-all therefore
+writes no completion registries.
+
+Compute the module path from the directory that holds go.mod relative to
+GOPATH/src instead, which yields the same value.
+---
+ cmd/carapace-generate/pkg/completer/completers.go | 18 ++++++++----------
+ 1 file changed, 8 insertions(+), 10 deletions(-)
+
+diff --git a/cmd/carapace-generate/pkg/completer/completers.go b/cmd/carapace-generate/pkg/completer/completers.go
+index dac7d203..2331d4ff 100644
+--- a/cmd/carapace-generate/pkg/completer/completers.go
++++ b/cmd/carapace-generate/pkg/completer/completers.go
+@@ -2,10 +2,8 @@ package completer
+ 
+ import (
+ 	"bufio"
+-	"encoding/json"
+ 	"io/fs"
+ 	"os"
+-	"os/exec"
+ 	"path/filepath"
+ 	"regexp"
+ 	"strings"
+@@ -145,37 +143,34 @@ func readRoot(path string) (string, string, error) {
+ }
+ 
+ func packagePrefix(dir string) (string, error) {
+-	content, err := exec.Command("go", "mod", "edit", "-json").Output()
++	c := carapace.NewContext()
++	var err error
++	c.Dir, err = c.Abs(dir)
+ 	if err != nil {
+ 		return "", err
+ 	}
+ 
+-	var gomod struct {
+-		Module struct {
+-			Path string
+-		}
+-	}
+-	if err := json.Unmarshal(content, &gomod); err != nil {
+-		return "", err
+-	}
+-
+-	c := carapace.NewContext()
+-	c.Dir, err = c.Abs(dir)
++	rootDir, err := traverse.Parent("go.mod")(c)
+ 	if err != nil {
+ 		return "", err
+ 	}
+ 
+-	rootDir, err := traverse.Parent("go.mod")(c)
++	// Derive the module path from the GOPATH layout rather than calling
++	// `go mod edit`, which is unavailable when the build runs in GOPATH mode
++	// (GO111MODULE=off), as Guix's go-build-system does.
++	srcDir := filepath.Join(
++		filepath.SplitList(os.Getenv("GOPATH"))[0], "src")
++	modulePath, err := filepath.Rel(srcDir, rootDir)
+ 	if err != nil {
+ 		return "", err
+ 	}
+ 
+-	dir, err = filepath.Rel(rootDir, c.Dir)
++	relDir, err := filepath.Rel(rootDir, c.Dir)
+ 	if err != nil {
+ 		return "", err
+ 	}
+-	if dir == "." {
+-		dir = ""
++	if relDir == "." {
++		relDir = ""
+ 	}
+-	return gomod.Module.Path + "/" + filepath.ToSlash(dir), nil
++	return filepath.ToSlash(filepath.Join(modulePath, relDir)), nil
+ }
+-- 
+2.51.0
+

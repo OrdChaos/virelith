@@ -35,7 +35,7 @@
 (define-public libadwaita-1.9
   (package
     (name "libadwaita")
-    (version "1.9.3")
+    (version "1.9.4")
     (source
      (origin
        (method url-fetch)
@@ -43,7 +43,7 @@
                            (version-major+minor version) "/"
                            "libadwaita-" version ".tar.xz"))
        (sha256
-        (base32 "08z7260nna76wlapfyd1h1q2502fdqpmv03viqq2c0gy51qb6ngw"))))
+        (base32 "1vk287x2ph83fxil36sx2a6hxllwg0hnhvgrrn9w4gblxr9k9azm"))))
     (build-system meson-build-system)
     (arguments
      (list

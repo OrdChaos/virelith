@@ -9,11 +9,8 @@
 ;;; Deviations from the upstream recipe, each checked against the pinned
 ;;; source:
 ;;; - wayland-protocols: the recipe overrides it with a custom 1.48 build,
-;;;   but every protocol XML used by v5.1.0 already ships in
+;;;   but every protocol XML used by v5.2.0 already ships in
 ;;;   Guix's wayland-protocols 1.47, so the system package is used.
-;;; - icon theme fallback: upstream commit 6d923916 adds 512x512 and theme-root
-;;;   lookup for index-less themes.  It landed after v5.1.0 and is backported
-;;;   as a minimal source patch until the next release contains it.
 ;;; - native_optimizations (the -march=native/-mtune=native option)
 ;;;   defaults to false and is left off; PACKAGING.md forbids it for
 ;;;   distro builds.
@@ -28,7 +25,6 @@
 ;;; deliberately left to the config/service layer, not this package.
 
 (define-module (virelith packages noctalia)
-               #:use-module ((gnu packages) #:select (search-patches))
                #:use-module (gnu packages calendar)      ; libical
                #:use-module (gnu packages cpp)           ; nlohmann-json, tomlplusplus
                #:use-module (gnu packages crypto)        ; libsodium
@@ -58,10 +54,10 @@
                #:use-module ((guix licenses) #:prefix license:))
 
 ;; Bump VERSION/COMMIT/SHA256 together when updating the package.
-(define %noctalia-version "5.1.0")
-(define %noctalia-commit "c7b9197af77ff22bfb9a83c52a95643a1d90ca86")
+(define %noctalia-version "5.2.0")
+(define %noctalia-commit "ec704377180fc4ffe79322a14a6ae87e9f922cae")
 (define %noctalia-sha256
-  (base32 "1zf4q6lrpb0zp3sdwlqmj1cxfhislkssya8cslj0w9y096ha3dq3"))
+  (base32 "16ndg97ri51g4b0hg4k3h7dyi6s3cqz2xsw2r999az2g5xd73x25"))
 
 (define-public noctalia
   (package
@@ -72,12 +68,9 @@
        (method git-fetch)
        (uri (git-reference
              (url "https://github.com/noctalia-dev/noctalia")
-              (commit %noctalia-commit))) ; tag v5.1.0
+              (commit %noctalia-commit))) ; tag v5.2.0
         (file-name (git-file-name name version))
-        (sha256 %noctalia-sha256)
-        (patches
-         (search-patches
-          "virelith/packages/patches/noctalia-icon-theme-fallback.patch"))))
+        (sha256 %noctalia-sha256)))
     (build-system meson-build-system)
     (arguments
      (list #:build-type "release"

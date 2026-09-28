@@ -24,11 +24,11 @@
 
 ;; Bump VERSION and both architecture hashes together when updating.
 (define %opencode-version
-  "1.18.31")
+  "1.18.33")
 (define %opencode-x86-64-sha256
-  (base32 "116w3v8s29309qdpsghcgf5ln5yj7g7956dpni5j5z76x7dyi0xj"))
+  (base32 "1mg6kcv15x0vs7y4rdp6z7v59k038ml611jz537hb5g94daac324"))
 (define %opencode-aarch64-sha256
-  (base32 "1rib0ix96kgw24hbqlgpr6azwvc2dxgwg7qd5ic4hx12dgs35qyl"))
+  (base32 "0n58mqrql63hdm7j4528fcd6d1984nyimh757gs4p4i18ri8cd66"))
 
 (define (%opencode-loader)
   (file-append glibc

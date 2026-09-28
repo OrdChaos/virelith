@@ -45,9 +45,9 @@
 (test-group "python-nautilus"
   (test-equal "package name" "python-nautilus"
     (package-name python-nautilus))
-  (test-equal "version 4.1.0" "4.1.0"
+  (test-equal "version 4.2.0" "4.2.0"
     (package-version python-nautilus))
-  (test-equal "pinned commit" "52fe5a0339065aa5461075c53002b1534b590188"
+  (test-equal "pinned commit" "17e7edf4d01bc43d0d550c5013d45659ac752cab"
     (git-reference-commit (origin-uri (package-source python-nautilus))))
   (test-assert "meson build system"
     (eq? meson-build-system (package-build-system python-nautilus)))

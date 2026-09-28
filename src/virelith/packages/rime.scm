@@ -235,10 +235,10 @@ without changing downstream package interfaces.")
 
 ;; Match the rime-ice-git revision used as the baseline for this channel draft.
 ;; Bump COMMIT/REVISION/SHA256 together when updating the package.
-(define %rime-ice-commit "80d213e")
-(define %rime-ice-revision "976")
+(define %rime-ice-commit "3aea6d3694fb3d94ec663641f021f788822897ad")
+(define %rime-ice-revision "1000")
 (define %rime-ice-sha256
-  (base32 "0p696mb1a86l20i9abmfvb131rqnnsd54r2z9w2kcypwwi3phihd"))
+  (base32 "112xgqahzs2y9iw4q6ij9ww358vq9zigaqmkg8hvhpjl9n9lfi5a"))
 
 (define-public rime-ice
   (package
@@ -296,9 +296,9 @@ under @file{share/rime-data} for use as immutable Rime shared data.")
 ;; https://github.com/OrdChaos/RIME-LMDG.snapshot/releases/tag/<version>
 ;; The release asset is immutable per tag, so the fixed-output sha256 is
 ;; stable.  Bump VERSION/SHA256 together with the snapshot tag when refreshing.
-(define %rime-data-wanxiang-version "20260829000040")
+(define %rime-data-wanxiang-version "20260924162904")
 (define %rime-data-wanxiang-sha256
-  (base32 "00kix17d44hzd0r50a2iaanvshs7jifdc5dbcip42g38pbhvnm25"))
+  (base32 "0nahvngy69391cwhj6kaj6vakvvcbklafb76xlczashdpgsjxg3i"))
 
 (define-public rime-data-wanxiang
   (package

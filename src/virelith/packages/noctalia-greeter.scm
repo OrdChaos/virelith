@@ -1,6 +1,6 @@
 ;;; Noctalia Greeter for Virelith.
 ;;;
-;;; Release packaging of noctalia-greeter 1.2.1 (Meson + Ninja), pinned
+;;; Release packaging of noctalia-greeter 1.6.0 (Meson + Ninja), pinned
 ;;; to an immutable upstream tag: version = tag name, commit = the tag's
 ;;; peeled commit, sha256 = nar hash of the git-fetch result.
 ;;;
@@ -45,6 +45,7 @@
                #:use-module (gnu packages stb)             ; stb-image-resize2
                #:use-module (gnu packages window-management) ; wlroots-0.20
                #:use-module (gnu packages xdisorg)         ; libxkbcommon
+               #:use-module (gnu packages xml)             ; libxml2
                #:use-module (guix build-system meson)
                #:use-module (guix gexp)
                #:use-module (guix git-download)
@@ -52,11 +53,11 @@
                #:use-module ((guix licenses) #:prefix license:))
 
 ;; Bump VERSION/COMMIT/SHA256 together when updating the package.
-(define %noctalia-greeter-version "1.2.1")
+(define %noctalia-greeter-version "1.6.0")
 (define %noctalia-greeter-commit
-  "bf5feefee3d90922952c1850eebdf93d1c0c7f01")
+  "44337ecba043749c29de6f3d563315b91987a908")
 (define %noctalia-greeter-sha256
-  (base32 "10aq5smf2qg1swsafpa7bm2jiwailxz64ks43slim8604yg85ylk"))
+  (base32 "1ml2wssydhlvsm16njrlqzyq4a0rlpc0h7jv6hcvwl3cd134f2ka"))
 
 (define-public noctalia-greeter
   (package
@@ -67,7 +68,7 @@
        (method git-fetch)
        (uri (git-reference
              (url "https://github.com/noctalia-dev/noctalia-greeter")
-             (commit %noctalia-greeter-commit))) ; tag v1.2.1
+             (commit %noctalia-greeter-commit))) ; tag v1.6.0
        (file-name (git-file-name name version))
        (sha256 %noctalia-greeter-sha256)))
     (build-system meson-build-system)
@@ -108,9 +109,10 @@
            glib
            harfbuzz
            libinput
-           libwebp
-           libxkbcommon
-           mesa
+            libwebp
+            libxkbcommon
+            libxml2
+            mesa
            nlohmann-json
            pango
            stb-image-resize2

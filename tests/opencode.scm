@@ -21,7 +21,7 @@
 (test-assert "opencode-bin: package shape"
   (and (package? opencode-bin)
        (string=? "opencode-bin" (package-name opencode-bin))
-       (string=? "1.18.31" (package-version opencode-bin))
+       (string=? "1.18.33" (package-version opencode-bin))
        (eq? 'binary
             (build-system-name (package-build-system opencode-bin)))
        (string=? "https://opencode.ai/" (package-home-page opencode-bin))
@@ -36,7 +36,7 @@
   (let ((uri (origin-uri (package-source opencode-bin))))
     (and (string? uri)
          (string-contains uri
-                          "github.com/anomalyco/opencode/releases/download/v1.18.31")
+                          "github.com/anomalyco/opencode/releases/download/v1.18.33")
          (not (string-contains uri "/latest/download/"))
          (string-suffix? ".tar.gz" uri)
          (if (string=? (%current-system) "x86_64-linux")

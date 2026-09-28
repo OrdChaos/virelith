@@ -14,14 +14,12 @@
 
 (test-begin "noctalia")
 
-(test-assert "package tracks v5.1.0 with the post-release icon fix"
+(test-assert "package tracks v5.2.0"
   (let ((source (package-source noctalia)))
-    (and (string=? "5.1.0" (package-version noctalia))
-         (string=? "c7b9197af77ff22bfb9a83c52a95643a1d90ca86"
+    (and (string=? "5.2.0" (package-version noctalia))
+         (string=? "ec704377180fc4ffe79322a14a6ae87e9f922cae"
                    (git-reference-commit (origin-uri source)))
-         (= 1 (length (origin-patches source)))
-         (string-contains (object->string (origin-patches source))
-                          "noctalia-icon-theme-fallback.patch"))))
+         (null? (origin-patches source)))))
 
 (test-assert "package retains the Meson release build"
   (and (eq? meson-build-system (package-build-system noctalia))
