@@ -28,21 +28,26 @@
 
 (define-module (virelith packages anime-launchers)
   #:use-module (gnu packages bash)            ;bash-minimal (launcher shebang)
-  #:use-module (gnu packages compression)     ;bzip2, p7zip
+  #:use-module (gnu packages compression)     ;bzip2, p7zip, zlib
   #:use-module (gnu packages freedesktop)     ;wayland
   #:use-module (gnu packages gcc)             ;gcc:lib (libgcc_s)
   #:use-module (gnu packages glib)            ;glib (gio/gobject)
   #:use-module (gnu packages gnome)           ;libadwaita
   #:use-module (gnu packages gstreamer)       ;gstreamer, gst-plugins-*, gst-libav
   #:use-module (gnu packages gtk)             ;cairo, gdk-pixbuf, gtk, pango
+  #:use-module (gnu packages libusb)          ;libusb
+  #:use-module (gnu packages linux)           ;alsa-lib, eudev, pipewire
+  #:use-module (gnu packages pulseaudio)      ;pulseaudio
   #:use-module (gnu packages version-control) ;git-minimal
+  #:use-module (gnu packages xdisorg)         ;libdrm
+  #:use-module (gnu packages xorg)            ;libx11, libxext
   #:use-module (guix build utils)             ;modify-phases, make-desktop-entry-file
   #:use-module (guix download)
   #:use-module (guix gexp)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix packages)
   #:use-module (nonguix build-system binary)
-  #:use-module (srfi srfi-1)                  ;append-map
+  #:use-module (srfi srfi-1)                  ;append-map, delete-duplicates
   #:export (anime-game-launcher-bin
             sleepy-launcher-bin))
 
@@ -58,6 +63,18 @@
 (define %anime-launcher-runtime-tools
   (list git-minimal p7zip))
 
+;; System libraries the downloaded Wine runners dlopen/need (union of the
+;; NEEDED entries of the runners' lib/wine/**/*.so).  The runners are
+;; upstream FHS builds with no RPATH, so their direct dependencies are only
+;; found through LD_LIBRARY_PATH; these packages are mostly already in the
+;; GTK/GStreamer closure, listed explicitly to reference their store paths.
+;; wpcap.so wants libpcap.so.0.8, which pinned Guix's libpcap (1.10.1,
+;; libpcap.so.1) does not provide; that optional network-capture driver is
+;; intentionally not covered.
+(define %anime-launcher-wine-libs
+  (list alsa-lib bzip2 glib gstreamer gst-plugins-base libdrm
+        pipewire pulseaudio eudev libusb wayland libx11 libxext zlib))
+
 ;; "dir1:dir2:..." argument list for a wrapper export.  Interleaved at
 ;; construction time so the generated string-append has no trailing
 ;; separator.
@@ -72,28 +89,35 @@
 (define %anime-launcher-tool-path
   (path-join %anime-launcher-runtime-tools "/bin"))
 
+(define %anime-launcher-wine-library-path
+  (path-join %anime-launcher-wine-libs "/lib"))
+
+;; Direct label→package inputs (explicit labels because the patchelf phase
+;; looks them up by name).
+(define %anime-launcher-direct-inputs
+  `(("gcc:lib" ,gcc "lib")
+    ("cairo" ,cairo)
+    ("gdk-pixbuf" ,gdk-pixbuf)
+    ("gtk" ,gtk)
+    ("libadwaita" ,libadwaita)
+    ("pango" ,pango)
+    ("bash-minimal" ,bash-minimal)))
+
 ;; Runtime inputs shared by both launchers: every NEEDED entry of the release
 ;; binary except the glibc family, which the launcher-supplied interpreter
-;; resolves.  "gcc:lib" supplies libgcc_s.so.1; the remaining names are the
-;; direct GTK stack dependencies plus the GStreamer plugin packages, the
-;; PATH tools and the wrapper's shell.  Listed with explicit labels because
-;; the build phase looks them up by name.
+;; resolves, plus the GStreamer plugin packages, the PATH tools, the Wine
+;; system libraries and the wrapper's shell.  Duplicate packages (e.g. wayland
+;; is both a GTK dep and a Wine dep) are collapsed by name.
 (define %anime-launcher-inputs
   (append
-   (list `("gcc:lib" ,gcc "lib")
-         `("bzip2" ,bzip2)
-         `("cairo" ,cairo)
-         `("gdk-pixbuf" ,gdk-pixbuf)
-         `("glib" ,glib)
-         `("gtk" ,gtk)
-         `("libadwaita" ,libadwaita)
-         `("pango" ,pango)
-         `("wayland" ,wayland)
-         `("bash-minimal" ,bash-minimal))
+   %anime-launcher-direct-inputs
    (map (lambda (package)
           (list (package-name package) package))
-        (append %anime-launcher-gst-plugins
-                %anime-launcher-runtime-tools))))
+        (delete-duplicates
+         (append %anime-launcher-gst-plugins
+                 %anime-launcher-runtime-tools
+                 %anime-launcher-wine-libs)
+         eq?))))
 
 (define %anime-launcher-runpath
   '("bzip2" "cairo" "gcc:lib" "gdk-pixbuf" "glib" "gtk"
@@ -173,6 +197,8 @@ launcher, pinned to VERSION and the fixed-output ASSET-SHA256."
                                "/libexec/gstreamer-1.0/gst-plugin-scanner"))
                     (format port "export PATH=~a${PATH:+:$PATH}~%"
                             (string-append #$@%anime-launcher-tool-path))
+                    (format port "export LD_LIBRARY_PATH=~a${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}~%"
+                            (string-append #$@%anime-launcher-wine-library-path))
                     (format port "exec ~a \"$@\"~%" real)))
                 (chmod launcher #o555))))
           (add-after 'install 'install-desktop-integration

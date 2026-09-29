@@ -45,10 +45,11 @@
     "libadwaita" "pango" "wayland"))
 
 (define %runtime-inputs
-  '("bash-minimal" "bzip2" "cairo" "gcc:lib" "gdk-pixbuf" "git-minimal"
-    "glib" "gst-libav" "gst-plugins-bad" "gst-plugins-base"
-    "gst-plugins-good" "gst-plugins-ugly" "gstreamer" "gtk" "libadwaita"
-    "p7zip" "pango" "wayland"))
+  '("alsa-lib" "bash-minimal" "bzip2" "cairo" "eudev" "gcc:lib"
+    "gdk-pixbuf" "git-minimal" "glib" "gst-libav" "gst-plugins-bad"
+    "gst-plugins-base" "gst-plugins-good" "gst-plugins-ugly" "gstreamer"
+    "gtk" "libadwaita" "libdrm" "libusb" "libx11" "libxext"
+    "p7zip" "pango" "pipewire" "pulseaudio" "wayland" "zlib"))
 
 (define (test-launcher package program version app-id)
   (define (name suffix)
@@ -87,7 +88,8 @@
            (string-contains phases "install-launcher-wrapper")
            (string-contains phases "GST_PLUGIN_SYSTEM_PATH")
            (string-contains phases "GST_PLUGIN_SCANNER")
-           (string-contains phases "export PATH="))))
+           (string-contains phases "export PATH=")
+           (string-contains phases "export LD_LIBRARY_PATH="))))
 
   (test-assert (name "pinned asset kept byte-for-byte, no substitutes")
     (and (flag-present? package 'strip-binaries?)
