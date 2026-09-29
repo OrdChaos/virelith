@@ -45,10 +45,10 @@
     "libadwaita" "pango" "wayland"))
 
 (define %runtime-inputs
-  '("bash-minimal" "bzip2" "cairo" "gcc:lib" "gdk-pixbuf" "glib"
-    "gst-libav" "gst-plugins-bad" "gst-plugins-base" "gst-plugins-good"
-    "gst-plugins-ugly" "gstreamer" "gtk" "libadwaita" "pango"
-    "wayland"))
+  '("bash-minimal" "bzip2" "cairo" "gcc:lib" "gdk-pixbuf" "git-minimal"
+    "glib" "gst-libav" "gst-plugins-bad" "gst-plugins-base"
+    "gst-plugins-good" "gst-plugins-ugly" "gstreamer" "gtk" "libadwaita"
+    "p7zip" "pango" "wayland"))
 
 (define (test-launcher package program version app-id)
   (define (name suffix)
@@ -78,7 +78,7 @@
            (every (lambda (lib) (string-contains plan lib))
                   %runpath-libs))))
 
-  (test-assert (name "real ELF under libexec, GStreamer-aware wrapper in bin")
+  (test-assert (name "real ELF under libexec, GStreamer/PATH-aware wrapper in bin")
     (let ((plan (plan-string (arguments-flag package 'install-plan)))
           (phases (plan-string (arguments-flag package 'phases))))
       (and (string-contains plan
@@ -86,7 +86,8 @@
                                            program "\""))
            (string-contains phases "install-launcher-wrapper")
            (string-contains phases "GST_PLUGIN_SYSTEM_PATH")
-           (string-contains phases "GST_PLUGIN_SCANNER"))))
+           (string-contains phases "GST_PLUGIN_SCANNER")
+           (string-contains phases "export PATH="))))
 
   (test-assert (name "pinned asset kept byte-for-byte, no substitutes")
     (and (flag-present? package 'strip-binaries?)
