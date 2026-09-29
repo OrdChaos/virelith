@@ -40,9 +40,15 @@
                       (gexp->approximate-sexp value)
                       value)))
 
-(define %runtime-inputs
+(define %runpath-libs
   '("bzip2" "cairo" "gcc:lib" "gdk-pixbuf" "glib" "gtk"
     "libadwaita" "pango" "wayland"))
+
+(define %runtime-inputs
+  '("bash-minimal" "bzip2" "cairo" "gcc:lib" "gdk-pixbuf" "glib"
+    "gst-libav" "gst-plugins-bad" "gst-plugins-base" "gst-plugins-good"
+    "gst-plugins-ugly" "gstreamer" "gtk" "libadwaita" "pango"
+    "wayland"))
 
 (define (test-launcher package program version app-id)
   (define (name suffix)
@@ -70,11 +76,17 @@
     (let ((plan (plan-string (arguments-flag package 'patchelf-plan))))
       (and (string-contains plan (string-append program "-" version))
            (every (lambda (lib) (string-contains plan lib))
-                  %runtime-inputs))))
+                  %runpath-libs))))
 
-  (test-assert (name "executable renamed without the -bin suffix")
-    (let ((plan (plan-string (arguments-flag package 'install-plan))))
-      (string-contains plan (string-append "\"bin/" program "\""))))
+  (test-assert (name "real ELF under libexec, GStreamer-aware wrapper in bin")
+    (let ((plan (plan-string (arguments-flag package 'install-plan)))
+          (phases (plan-string (arguments-flag package 'phases))))
+      (and (string-contains plan
+                            (string-append "\"libexec/" program "/"
+                                           program "\""))
+           (string-contains phases "install-launcher-wrapper")
+           (string-contains phases "GST_PLUGIN_SYSTEM_PATH")
+           (string-contains phases "GST_PLUGIN_SCANNER"))))
 
   (test-assert (name "pinned asset kept byte-for-byte, no substitutes")
     (and (flag-present? package 'strip-binaries?)

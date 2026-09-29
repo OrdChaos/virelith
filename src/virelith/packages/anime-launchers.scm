@@ -13,14 +13,23 @@
 ;;; moe.launcher.* and derives its About icon from the icon theme, so the
 ;;; desktop entry and icon installed here must use that same id.
 ;;;
+;;; Both launchers use GTK4's media backend (GstPlay / playbin3) to play
+;;; their background video.  GTK4 pulls the GStreamer libraries in
+;;; transitively, but the plugin directories are not on the loader's
+;;; GST_PLUGIN_SYSTEM_PATH, so the real ELF is moved to libexec and a thin
+;;; launcher exports the plugin/scanner paths.  Without this the launcher
+;;; aborts with "GstPlay: 'playbin3' element not found".
+;;;
 ;;; Bump a launcher's VERSION and asset/icon SHA256s together when updating.
 
 (define-module (virelith packages anime-launchers)
+  #:use-module (gnu packages bash)            ;bash-minimal (launcher shebang)
   #:use-module (gnu packages compression)     ;bzip2
   #:use-module (gnu packages freedesktop)     ;wayland
   #:use-module (gnu packages gcc)             ;gcc:lib (libgcc_s)
   #:use-module (gnu packages glib)            ;glib (gio/gobject)
   #:use-module (gnu packages gnome)           ;libadwaita
+  #:use-module (gnu packages gstreamer)       ;gstreamer, gst-plugins-*, gst-libav
   #:use-module (gnu packages gtk)             ;cairo, gdk-pixbuf, gtk, pango
   #:use-module (guix build utils)             ;modify-phases, make-desktop-entry-file
   #:use-module (guix download)
@@ -28,24 +37,46 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix packages)
   #:use-module (nonguix build-system binary)
+  #:use-module (srfi srfi-1)                  ;append-map
   #:export (anime-game-launcher-bin
             sleepy-launcher-bin))
+
+;; GStreamer plugins required by the GTK4 media backend at run time.  The
+;; core package supplies the loader elements, base the playback element
+;; (playbin3), the rest the codecs/demuxers used for the background video.
+(define %anime-launcher-gst-plugins
+  (list gstreamer gst-plugins-base gst-plugins-good
+        gst-plugins-bad gst-plugins-ugly gst-libav))
+
+;; "dir1:dir2:..." argument list for the wrapper's GST_PLUGIN_SYSTEM_PATH.
+;; Interleaved at construction time so the generated string-append has no
+;; trailing separator.
+(define %anime-launcher-gst-plugin-path
+  (cdr (append-map (lambda (package)
+                     (list ":" (file-append package "/lib/gstreamer-1.0")))
+                   %anime-launcher-gst-plugins)))
 
 ;; Runtime inputs shared by both launchers: every NEEDED entry of the release
 ;; binary except the glibc family, which the launcher-supplied interpreter
 ;; resolves.  "gcc:lib" supplies libgcc_s.so.1; the remaining names are the
-;; direct GTK stack dependencies.  Listed with explicit labels because the
-;; build phase looks them up by name.
+;; direct GTK stack dependencies plus the GStreamer plugin packages and the
+;; wrapper's shell.  Listed with explicit labels because the build phase
+;; looks them up by name.
 (define %anime-launcher-inputs
-  (list `("gcc:lib" ,gcc "lib")
-        `("bzip2" ,bzip2)
-        `("cairo" ,cairo)
-        `("gdk-pixbuf" ,gdk-pixbuf)
-        `("glib" ,glib)
-        `("gtk" ,gtk)
-        `("libadwaita" ,libadwaita)
-        `("pango" ,pango)
-        `("wayland" ,wayland)))
+  (append
+   (list `("gcc:lib" ,gcc "lib")
+         `("bzip2" ,bzip2)
+         `("cairo" ,cairo)
+         `("gdk-pixbuf" ,gdk-pixbuf)
+         `("glib" ,glib)
+         `("gtk" ,gtk)
+         `("libadwaita" ,libadwaita)
+         `("pango" ,pango)
+         `("wayland" ,wayland)
+         `("bash-minimal" ,bash-minimal))
+   (map (lambda (package)
+          (list (package-name package) package))
+        %anime-launcher-gst-plugins)))
 
 (define %anime-launcher-runpath
   '("bzip2" "cairo" "gcc:lib" "gdk-pixbuf" "glib" "gtk"
@@ -91,7 +122,8 @@ launcher, pinned to VERSION and the fixed-output ASSET-SHA256."
       #:patchelf-plan
       #~(list (list #$unpacked (list #$@%anime-launcher-runpath)))
       #:install-plan
-      #~(list (list #$unpacked #$(string-append "bin/" program)))
+      #~(list (list #$unpacked
+                    #$(string-append "libexec/" program "/" program)))
       #:phases
       #~(modify-phases %standard-phases
           ;; The copied release asset keeps its read-only store permissions;
@@ -99,6 +131,30 @@ launcher, pinned to VERSION and the fixed-output ASSET-SHA256."
           (add-before 'patchelf 'make-binary-writable
             (lambda _
               (chmod #$unpacked #o755)))
+          ;; GTK4's media backend needs the GStreamer plugin directories on
+          ;; GST_PLUGIN_SYSTEM_PATH (the raw release binary is not wrapped by
+          ;; any Guix build system).  The real ELF lives in libexec; expose a
+          ;; thin launcher that exports the plugin/scanner paths and execs it.
+          (add-after 'install 'install-launcher-wrapper
+            (lambda* (#:key outputs #:allow-other-keys)
+              (let* ((out (assoc-ref outputs "out"))
+                     (bin (string-append out "/bin"))
+                     (real (string-append out
+                                          "/libexec/" #$program "/" #$program))
+                     (launcher (string-append bin "/" #$program)))
+                (mkdir-p bin)
+                (call-with-output-file launcher
+                  (lambda (port)
+                    (format port "#!~a~%"
+                            #$(file-append bash-minimal "/bin/sh"))
+                    (format port "export GST_PLUGIN_SYSTEM_PATH=~a~%"
+                            (string-append #$@%anime-launcher-gst-plugin-path))
+                    (format port "export GST_PLUGIN_SCANNER=~a~%"
+                            #$(file-append
+                               gstreamer
+                               "/libexec/gstreamer-1.0/gst-plugin-scanner"))
+                    (format port "exec ~a \"$@\"~%" real)))
+                (chmod launcher #o555))))
           (add-after 'install 'install-desktop-integration
             (lambda* (#:key inputs outputs #:allow-other-keys)
               (let* ((out (assoc-ref outputs "out"))
