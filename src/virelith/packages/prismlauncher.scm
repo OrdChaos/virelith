@@ -32,6 +32,12 @@
 ;;;   backend (LWJGL loads libvulkan.so.1 at runtime; the game's JVM has no
 ;;;   RUNPATH for it) can find the loader.  The ICD/registry paths come from
 ;;;   the session environment (VK_ADD_DRIVER_FILES etc.).
+;;; - wayland (libwayland-client/-egl/-cursor) and libxkbcommon are exposed
+;;;   for the same reason: SDL3 otherwise cannot initialise its Wayland
+;;;   backend and silently falls back to X11/XWayland, while LWJGL on a
+;;;   Wayland session defaults to EGL - the two then disagree and the game's
+;;;   OpenGL backend fails ("Could not retrieve OpenGL functions").  With the
+;;;   Wayland client libraries reachable SDL picks Wayland and both use EGL.
 ;;; - The launcher caches the detected Java path and signature in
 ;;;   prismlauncher.cfg.  A Guix reconfigure can move the JDK's store path,
 ;;;   so the wrapper scrubs the cached Java identity before every launch.
@@ -45,6 +51,7 @@
   #:use-module (gnu packages bash)           ;bash-minimal
   #:use-module (gnu packages compression)    ;zlib
   #:use-module (gnu packages cpp)            ;tomlplusplus
+  #:use-module (gnu packages freedesktop)    ;wayland (libwayland-client/-egl/...)
   #:use-module (gnu packages gl)             ;mesa
   #:use-module (gnu packages java)           ;openjdk21
   #:use-module (gnu packages kde-frameworks) ;extra-cmake-modules
@@ -56,6 +63,7 @@
   #:use-module (gnu packages pulseaudio)     ;pulseaudio
   #:use-module (gnu packages qt)             ;qtbase, qt5compat, ...
   #:use-module (gnu packages vulkan)         ;vulkan-loader
+  #:use-module (gnu packages xdisorg)        ;libxkbcommon
   #:use-module (gnu packages xorg)           ;libx11, libxext, ...
   #:use-module (guix build-system cmake)
   #:use-module (guix gexp)                   ;#~
@@ -118,8 +126,8 @@
                     (,@(map (lambda (dep)
                               (string-append (assoc-ref inputs dep) "/lib"))
                             '("libx11" "libxext" "libxcursor" "libxrandr"
-                              "libxxf86vm" "pulseaudio" "mesa"
-                              "vulkan-loader")))))
+                              "libxxf86vm" "libxkbcommon" "pulseaudio"
+                              "mesa" "vulkan-loader" "wayland")))))
                 ;; A rebuilt JDK changes its store path; drop the cached
                 ;; identity so the launcher re-detects Java on next start.
                 (substitute* program
@@ -145,6 +153,7 @@
            libx11
            libxcursor
            libxext
+           libxkbcommon
            libxrandr
            libxxf86vm
            mesa
@@ -159,6 +168,7 @@
            sed                            ;config scrubbing in the wrapper
            tomlplusplus
            vulkan-loader                  ;libvulkan.so.1 for the game
+           wayland                        ;SDL Wayland backend (libwayland-*)
            xrandr
            zlib))
     ;; Let the profile expose the JDKs that the config layer contributes
