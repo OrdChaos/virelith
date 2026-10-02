@@ -28,6 +28,10 @@
 ;;;   by name; both are put on the wrapper's PATH.  Qt plugins and the X11,
 ;;;   PulseAudio and Mesa libraries the launcher probes for are exposed via
 ;;;   QT_PLUGIN_PATH and LD_LIBRARY_PATH.
+;;; - vulkan-loader is exposed on LD_LIBRARY_PATH so Minecraft's Vulkan
+;;;   backend (LWJGL loads libvulkan.so.1 at runtime; the game's JVM has no
+;;;   RUNPATH for it) can find the loader.  The ICD/registry paths come from
+;;;   the session environment (VK_ADD_DRIVER_FILES etc.).
 ;;; - The launcher caches the detected Java path and signature in
 ;;;   prismlauncher.cfg.  A Guix reconfigure can move the JDK's store path,
 ;;;   so the wrapper scrubs the cached Java identity before every launch.
@@ -51,6 +55,7 @@
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages pulseaudio)     ;pulseaudio
   #:use-module (gnu packages qt)             ;qtbase, qt5compat, ...
+  #:use-module (gnu packages vulkan)         ;vulkan-loader
   #:use-module (gnu packages xorg)           ;libx11, libxext, ...
   #:use-module (guix build-system cmake)
   #:use-module (guix gexp)                   ;#~
@@ -113,7 +118,8 @@
                     (,@(map (lambda (dep)
                               (string-append (assoc-ref inputs dep) "/lib"))
                             '("libx11" "libxext" "libxcursor" "libxrandr"
-                              "libxxf86vm" "pulseaudio" "mesa")))))
+                              "libxxf86vm" "pulseaudio" "mesa"
+                              "vulkan-loader")))))
                 ;; A rebuilt JDK changes its store path; drop the cached
                 ;; identity so the launcher re-detects Java on next start.
                 (substitute* program
@@ -152,6 +158,7 @@
            qtwayland
            sed                            ;config scrubbing in the wrapper
            tomlplusplus
+           vulkan-loader                  ;libvulkan.so.1 for the game
            xrandr
            zlib))
     ;; Let the profile expose the JDKs that the config layer contributes
