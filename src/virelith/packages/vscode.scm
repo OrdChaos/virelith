@@ -74,27 +74,35 @@
                  (symlink (string-append #$output
                                          "/opt/vscode/VSCode-linux-x64/code")
                           (string-append bin "/code")))))
-          ;; The upstream launcher directly execs Electron, which keeps an
-          ;; interactive shell occupied and sends GUI diagnostics to it.
           ;; Retain Nonguix's generated runtime wrapper as the private real
-          ;; entry point, then expose a CLI launcher that returns after GUI
-          ;; startup.  --wait remains synchronous for editor integrations.
+          ;; entry point, then mimic the upstream launcher (bin/code inside
+          ;; the tarball): run resources/app/out/cli.js via
+          ;; ELECTRON_RUN_AS_NODE, in the foreground, with stdout/stderr and
+          ;; the exit code passed through.  cli.js detaches on its own for
+          ;; GUI invocations (code, code ., code file), so the shell returns
+          ;; immediately and quietly, while CLI subcommands (--version,
+          ;; --list-extensions, --install-extension, --uninstall-extension,
+          ;; --status, --help, --wait, ...) stay synchronous and transparent.
+          ;; No argument sniffing: cli.js is the single authority on which
+          ;; invocations are terminal commands, for both "--flag value" and
+          ;; "--flag=value" forms.
           (add-after 'install-wrapper 'install-cli-launcher
              (lambda _
                (let* ((bin (string-append #$output "/bin"))
                       (code (string-append bin "/code"))
-                      (real (string-append bin "/.code-real")))
+                      (real (string-append bin "/.code-real"))
+                      (cli (string-append #$output
+                                          "/opt/vscode/VSCode-linux-x64/"
+                                          "resources/app/out/cli.js")))
                  (rename-file code real)
                  (call-with-output-file
                      code
                    (lambda (port)
                      (format port "#!~a~%"
                              #$(file-append bash-minimal "/bin/sh"))
-                     (display "for argument in \"$@\"; do\n" port)
-                     (format port "  [ \"$argument\" = --wait ] && exec '~a' \"$@\"\n"
-                             real)
-                     (display "done\n" port)
-                     (format port "'~a' \"$@\" >/dev/null 2>&1 &\n" real)))
+                     (format port
+                             "ELECTRON_RUN_AS_NODE=1 exec '~a' '~a' \"$@\"~%"
+                             real cli)))
                  (chmod code #o555))))
           (add-after 'install-entrypoint 'install-resources
             (lambda _
