@@ -350,6 +350,6 @@ conflict is reported instead of a silently extension-less desktop launch."
             ;; Icon resources are referenced by name from the desktop entry;
             ;; reuse the base package's hicolor tree.
             (symlink (string-append #$vscode "/share/icons")
-                     (string-append #$output "/share/icons")))))))))
+                     (string-append #$output "/share/icons"))))))))
 
 ;;; vscode-extensions.scm ends here
