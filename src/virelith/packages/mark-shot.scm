@@ -66,6 +66,22 @@
 
 (define onnxruntime/no-cpuinfo-tests
   (package/inherit onnxruntime
+    ;; onnxruntime runs its (heavy, Python) test suite by default, which pulls
+    ;; python-pytorch and, through its propagated inputs, the core cpuinfo
+    ;; (tests enabled).  Disabling the tests and dropping the Python test-only
+    ;; native inputs keeps the core cpuinfo out of the build graph, so only
+    ;; the test-less cpuinfo variant above is needed.
+    (arguments
+     (append (package-arguments onnxruntime)
+             (list #:tests? #f)))
+    (native-inputs
+     (modify-inputs (package-native-inputs onnxruntime)
+       (delete "python-einops"
+               "python-parameterized"
+               "python-psutil"
+               "python-pytest"
+               "python-pytorch"
+               "python-sentencepiece")))
     (inputs
      (modify-inputs (package-inputs onnxruntime)
        (replace "cpuinfo" cpuinfo/no-tests)))))
