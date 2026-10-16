@@ -118,6 +118,21 @@
               "-DMARK_SHOT_WITH_LIBPORTAL=OFF")
       #:phases
       #~(modify-phases %standard-phases
+          (add-after 'unpack 'fix-layer-shell-qt-api
+            (lambda _
+              ;; mark-shot targets a newer LayerShellQt Window API; the pinned
+              ;; layer-shell-qt 6.5.5 exposes setScreenConfiguration() instead
+              ;; of setScreen()/setWantsToBeOnActiveScreen()/screen().  The
+              ;; target screen is already applied to the native QWindow, and
+              ;; ScreenFromQWindow is the default screen configuration, so the
+              ;; surface still follows it.
+              (substitute* "src/layer_shell_plugin.cpp"
+                (("layerWindow->setScreen\\(screen\\)")
+                 "layerWindow->setScreenConfiguration(LayerShellQt::Window::ScreenFromQWindow)")
+                (("layerWindow->setWantsToBeOnActiveScreen\\(true\\)")
+                 "(void)0")
+                (("screen && layerWindow->screen\\(\\) != screen")
+                 "false"))))
           (add-after 'install 'patch-python-shebangs
             (lambda* (#:key inputs #:allow-other-keys)
               (let ((python (assoc-ref inputs "python-minimal")))
@@ -129,7 +144,7 @@
                                   (("#!/usr/bin/env python3")
                                    (string-append "#!" python
                                                   "/bin/python3"))))))
-                          #$%mark-shot-helper-scripts))))
+                          '#$%mark-shot-helper-scripts))))
           (add-after 'install 'wrap-runtime-paths
             (lambda* (#:key inputs outputs #:allow-other-keys)
               (let* ((out (assoc-ref outputs "out"))
