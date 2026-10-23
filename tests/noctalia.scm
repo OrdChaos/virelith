@@ -14,10 +14,10 @@
 
 (test-begin "noctalia")
 
-(test-assert "package tracks v5.2.0"
+(test-assert "package tracks v5.3.0"
   (let ((source (package-source noctalia)))
-    (and (string=? "5.2.0" (package-version noctalia))
-         (string=? "ec704377180fc4ffe79322a14a6ae87e9f922cae"
+     (and (string=? "5.3.0" (package-version noctalia))
+          (string=? "a33122c4208a385e19c9a252e65e2751b2c44fbb"
                    (git-reference-commit (origin-uri source)))
          (null? (origin-patches source)))))
 

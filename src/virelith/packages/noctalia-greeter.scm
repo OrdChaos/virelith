@@ -1,6 +1,6 @@
 ;;; Noctalia Greeter for Virelith.
 ;;;
-;;; Release packaging of noctalia-greeter 1.6.0 (Meson + Ninja), pinned
+;;; Release packaging of noctalia-greeter 1.7.0 (Meson + Ninja), pinned
 ;;; to an immutable upstream tag: version = tag name, commit = the tag's
 ;;; peeled commit, sha256 = nar hash of the git-fetch result.
 ;;;
@@ -40,7 +40,7 @@
                #:use-module (gnu packages glib)            ; glib
                #:use-module (gnu packages gnome)           ; librsvg-for-system
                #:use-module (gnu packages gtk)             ; cairo, gdk-pixbuf, harfbuzz, pango
-               #:use-module (gnu packages image)           ; libwebp
+                #:use-module (gnu packages image)           ; libjxl, libwebp
                #:use-module (gnu packages pkg-config)
                #:use-module (gnu packages stb)             ; stb-image-resize2
                #:use-module (gnu packages window-management) ; wlroots-0.20
@@ -53,11 +53,11 @@
                #:use-module ((guix licenses) #:prefix license:))
 
 ;; Bump VERSION/COMMIT/SHA256 together when updating the package.
-(define %noctalia-greeter-version "1.6.0")
+(define %noctalia-greeter-version "1.7.0")
 (define %noctalia-greeter-commit
-  "44337ecba043749c29de6f3d563315b91987a908")
+  "af0bf4b1e1c40738db917b04c9c0563b4f718953")
 (define %noctalia-greeter-sha256
-  (base32 "1ml2wssydhlvsm16njrlqzyq4a0rlpc0h7jv6hcvwl3cd134f2ka"))
+  (base32 "1wsrmjh8mmnbsfsspn0hvpd6di9mlm20qiigxcniq5s6za74ic90"))
 
 (define-public noctalia-greeter
   (package
@@ -68,7 +68,7 @@
        (method git-fetch)
        (uri (git-reference
              (url "https://github.com/noctalia-dev/noctalia-greeter")
-             (commit %noctalia-greeter-commit))) ; tag v1.6.0
+              (commit %noctalia-greeter-commit))) ; tag v1.7.0
        (file-name (git-file-name name version))
        (sha256 %noctalia-greeter-sha256)))
     (build-system meson-build-system)
@@ -108,7 +108,8 @@
            gdk-pixbuf
            glib
            harfbuzz
-           libinput
+            libinput
+            libjxl
             libwebp
             libxkbcommon
             libxml2

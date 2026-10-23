@@ -26,17 +26,28 @@
   #:use-module (gnu packages glib)           ;python-pygobject
   #:use-module (gnu packages linux)          ;tlp
   #:use-module (gnu packages python)         ;python
-  #:use-module (gnu packages python-xyz)     ;python-dbus
-  #:use-module (guix gexp)                   ;#~
-  #:use-module (guix packages)               ;inherit、modify-inputs、package-arguments
+   #:use-module (gnu packages python-xyz)     ;python-dbus
+   #:use-module (guix gexp)                   ;#~
+   #:use-module (guix git-download)
+   #:use-module (guix packages)               ;inherit、modify-inputs、package-arguments
   #:use-module (guix utils)                  ;substitute-keyword-arguments
   #:export (tlp-with-pd))
 
 (define-public tlp-with-pd
   (package
-    (inherit tlp)
-    (name "tlp-with-pd")
-    (synopsis "Power management tool with the TLP profiles daemon")
+     (inherit tlp)
+     (name "tlp-with-pd")
+     (version "1.10.2")
+     (source
+      (origin
+       (method git-fetch)
+       (uri (git-reference
+             (url "https://github.com/linrunner/TLP")
+             (commit version)))
+       (file-name (git-file-name name version))
+       (sha256
+        (base32 "0ck41hfzlxk0403bq9im71dim2xjic0rvgkgjjmh5y49fzky057z"))))
+     (synopsis "Power management tool with the TLP profiles daemon")
     (arguments
      (substitute-keyword-arguments (package-arguments tlp)
        ((#:phases phases)

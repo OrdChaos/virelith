@@ -12,14 +12,18 @@
 ;;; third-party dependencies rather than with Carapace's own modules.
 ;;;
 ;;; Dependencies that Guix already provides unchanged (go-toml, ini, yaml.v3,
-;;; x/mod) are re-exported so that (virelith packages carapace) has a single
-;;; place to import its dependency set from.
+;;; x/mod) are re-exported, alongside the renamed go.yaml.in/yaml/v3 module,
+;;; so that (virelith packages carapace) has a single place to import its
+;;; dependency set from.
 
 (define-module (virelith packages carapace-dependencies)
+  #:use-module (gnu packages compression) ;unzip
   #:use-module (gnu packages golang-build) ;go-golang-org-x-mod
-  #:use-module (gnu packages golang-xyz)   ;go-toml, ini, yaml.v3
-  #:use-module (guix build-system go)
-  #:use-module (guix git-download)
+   #:use-module (gnu packages golang-xyz)   ;go-toml, ini, yaml.v3
+   #:use-module (guix build-system go)
+   #:use-module (guix download)
+   #:use-module (guix gexp)
+   #:use-module (guix git-download)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix packages)
   #:re-export (go-golang-org-x-mod
@@ -28,13 +32,49 @@
                go-gopkg-in-ini-v1
                go-gopkg-in-yaml-v3)
   #:export (go-github-com-spf13-pflag
-            go-github-com-kevinburke-ssh-config
-            go-github-com-spf13-cobra
-            go-github-com-micromdm-plist))
+             go-github-com-kevinburke-ssh-config
+             go-github-com-spf13-cobra
+             go-github-com-micromdm-plist
+             go-go-yaml-in-yaml-v3))
 
 ;;; The two drop-in forks.  They keep the upstream module path on purpose,
 ;;; which is what makes them usable as replacements in module mode and lets
 ;;; GOPATH mode resolve them at the original import path.
+
+;; Carapace 1.8.1 moved its direct YAML dependency to this renamed module.
+(define-public go-go-yaml-in-yaml-v3
+  (package
+    (name "go-go-yaml-in-yaml-v3")
+    (version "3.0.5")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://proxy.golang.org/go.yaml.in/yaml/v3/@v/v"
+                           version ".zip"))
+       (sha256
+        (base32 "01cjw5im48f172kjggilb563fz7hqpw9m24bqnp86qpn6nm0rmzj"))))
+    (build-system go-build-system)
+    (native-inputs (list unzip))
+    (arguments
+     (list #:import-path "go.yaml.in/yaml/v3"
+            #:phases
+            #~(modify-phases %standard-phases
+                ;; The Go proxy archive nests the module below go.yaml.in/.
+                ;; Flatten it after unpacking so GOPATH resolves the import path.
+                (add-after 'unpack 'flatten-module-source
+                  (lambda _
+                    (let ((module "src/go.yaml.in/yaml/v3/yaml/v3@v3.0.5")
+                          (destination "src/go.yaml.in/yaml/v3"))
+                      (copy-recursively module destination #:keep-mtime? #t)
+                      (delete-file-recursively
+                       (string-append destination "/yaml"))))))
+            #:tests? #f))
+    (home-page "https://go.yaml.in/yaml/v3")
+    (synopsis "YAML reader and writer for Go")
+    (description
+     "This package provides YAML encoding and decoding for Go under the
+renamed @code{go.yaml.in/yaml/v3} module path.")
+    (license license:asl2.0)))
 
 ;; Bump VERSION/hash together.  This is carapace-sh/carapace-pflag, the fork
 ;; of spf13/pflag that adds the shorthand flag helpers (StringS, BoolS, ...)

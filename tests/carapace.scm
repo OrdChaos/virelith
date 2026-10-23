@@ -26,9 +26,9 @@
 
 (test-begin "carapace")
 
-(test-equal "package version" "1.8.0" (package-version carapace-bin))
+(test-equal "package version" "1.8.1" (package-version carapace-bin))
 (test-equal "pinned release commit"
-  "00e8827bf6641c4fd1e9a319d3b051a17139778f"
+  "6bc2b8d69a2474b6eeb626a85ef83254c2ab7d82"
   (git-reference-commit (origin-uri (package-source carapace-bin))))
 (test-assert "go build system"
   (eq? go-build-system (package-build-system carapace-bin)))
@@ -51,7 +51,7 @@
   (let ((args (object->string (argument carapace-bin 'phases))))
     (and (string-contains args "set-version")
          (string-contains args "develop")
-         (string-contains args "1.8.0"))))
+          (string-contains args "1.8.1"))))
 (test-assert "force_all completer registry"
   (string-contains (object->string (argument carapace-bin 'build-flags))
                    "force_all"))
@@ -68,16 +68,18 @@
     "go-github-com-carapace-sh-carapace-jjlex"
     "go-github-com-carapace-sh-carapace-jq"
     "go-github-com-carapace-sh-carapace-pnpm"
-    "go-github-com-carapace-sh-carapace-selfupdate"
-    "go-github-com-carapace-sh-carapace-shlex"
+     "go-github-com-carapace-sh-carapace-selfupdate"
+     "go-github-com-carapace-sh-carapace-shlex"
+     "go-github-com-carapace-sh-carapace-shlex-v2"
     "go-github-com-carapace-sh-carapace-spec"
     "go-github-com-kevinburke-ssh-config"
     "go-github-com-micromdm-plist"
     "go-github-com-pelletier-go-toml"
     "go-github-com-pelletier-go-toml-v2"
-    "go-github-com-spf13-cobra"
-    "go-github-com-spf13-pflag"
-    "go-golang-org-x-mod"
+     "go-github-com-spf13-cobra"
+     "go-github-com-spf13-pflag"
+     "go-go-yaml-in-yaml-v3"
+     "go-golang-org-x-mod"
     "go-gopkg-in-ini-v1"
     "go-gopkg-in-yaml-v3")
   (sort (input-names carapace-bin) string<?))
@@ -105,7 +107,7 @@
                go-github-com-carapace-sh-carapace-jjlex
                go-github-com-carapace-sh-carapace-pnpm)))
 
-(test-equal "carapace library version" "1.16.2"
+(test-equal "carapace library version" "1.17.0-alpha"
   (package-version go-github-com-carapace-sh-carapace))
 
 (test-end "carapace")

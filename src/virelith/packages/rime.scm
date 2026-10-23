@@ -233,17 +233,16 @@ without changing downstream package interfaces.")
    %default-librime-plugins
    #:name "librime-virelith"))
 
-;; Match the rime-ice-git revision used as the baseline for this channel draft.
-;; Bump COMMIT/REVISION/SHA256 together when updating the package.
-(define %rime-ice-commit "3aea6d3694fb3d94ec663641f021f788822897ad")
-(define %rime-ice-revision "1000")
+;; Bump VERSION/COMMIT/SHA256 together when updating the package.
+(define %rime-ice-version "2026.06.30")
+(define %rime-ice-commit "6810e8916d160498620a16fef2135956fecbd485")
 (define %rime-ice-sha256
-  (base32 "112xgqahzs2y9iw4q6ij9ww358vq9zigaqmkg8hvhpjl9n9lfi5a"))
+  (base32 "1jvnwaaykr78917y4sl8mg8f2f1yn1z0354xm4hxmpx1i0aq25qx"))
 
 (define-public rime-ice
   (package
     (name "rime-ice")
-    (version (git-version "0" %rime-ice-revision %rime-ice-commit))
+    (version %rime-ice-version)
     (source
      (origin
        (method git-fetch)
