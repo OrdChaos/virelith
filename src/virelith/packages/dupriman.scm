@@ -20,7 +20,7 @@
   #:export (dupriman))
 
 (define %dupriman-version "0.1.0")
-(define %dupriman-commit "1b1721d7b928a6f1b0b13cb8e9a73ec13fbd9657")
+(define %dupriman-commit "2c5bc10438e2a4f84fee5b7c9b6b2f5548faaa31")
 
 (define-public dupriman
   (package
@@ -34,7 +34,7 @@
              (commit %dupriman-commit)))
        (file-name (git-file-name name version))
        (sha256
-        (base32 "15p7wd4vc735az4kpzaslhk20w1nzpyznf4xv4mwm0n6isv3qqbc"))))
+         (base32 "14j9la7swhrx3m3p2rvzq00d03qfxb4i184iy3d05dqbk9b5724d"))))
     (build-system cargo-build-system)
     (arguments
      (list
