@@ -17,7 +17,7 @@
 (test-equal "package name" "dupriman" (package-name dupriman))
 (test-equal "release version" "0.1.0" (package-version dupriman))
 (test-equal "pinned release commit"
-  "2c5bc10438e2a4f84fee5b7c9b6b2f5548faaa31"
+  "3869f38eb25d4f9e89a69318a5bfeddc8f5149af"
   (git-reference-commit (origin-uri (package-source dupriman))))
 (test-assert "cargo build system"
   (eq? cargo-build-system (package-build-system dupriman)))
