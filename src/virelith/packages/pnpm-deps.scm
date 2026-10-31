@@ -42,20 +42,21 @@ a tarball or a directory; LOCKFILE and WORKSPACE are relative names.  The
 install runs in %PNPM-BUILD-ROOT; per-install metadata is removed and pnpm
 shims are made Guix-compatible before the tree is hashed."
   (match uri
-    ((source lockfile workspace pnpm node)
+    ((source lockfile workspace pnpm node root)
      (unless (and (string? lockfile)
-                  (or (not workspace) (string? workspace)))
+                  (or (not workspace) (string? workspace))
+                  (string? root))
        (error "pnpm-install-method: lockfile/workspace must be relative names"
-              lockfile workspace))
+              lockfile workspace root))
      (mlet %store-monad ((guile (package->derivation guile system #:graft? #f)))
        (gexp->derivation name
          (with-imported-modules '((guix build utils))
            #~(begin
                (use-modules (guix build utils))
-               (let* ((root #$%pnpm-build-root)
-                      (home "/tmp/guix-dsh-build-home")
-                      (cache "/tmp/guix-dsh-build-cache")
-                      (store "/tmp/guix-dsh-build-store")
+               (let* ((root #$root)
+                      (home (string-append root "-home"))
+                      (cache (string-append root "-cache"))
+                      (store (string-append root "-store"))
                       (source #$source))
                  (for-each (lambda (path)
                              (when (file-exists? path)
@@ -141,11 +142,14 @@ shims are made Guix-compatible before the tree is hashed."
                        (workspace "pnpm-workspace.yaml")
                        (pnpm pnpm)
                        (node node)
+                       (root %pnpm-build-root)
                        hash)
   "Return a fixed-output origin holding SOURCE after pnpm install (source
-plus all workspace node_modules trees).  HASH is the recursive sha256."
+plus all workspace node_modules trees).  HASH is the recursive sha256.
+ROOT is the fixed absolute install directory; it is embedded in pnpm shims
+and must be unique per concurrently built profile."
   (origin
     (method pnpm-install-method)
-    (uri (list source lockfile workspace pnpm node))
+    (uri (list source lockfile workspace pnpm node root))
     (file-name "pnpm-node-modules")
     (sha256 hash)))
