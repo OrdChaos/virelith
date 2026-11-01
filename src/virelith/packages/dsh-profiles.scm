@@ -73,13 +73,20 @@
   "Return (SPEC . RELATIVE-PATCH-PATH) for PATCH at INDEX."
   (cons (car patch) (patch-file-name index patch)))
 
-(define (profile-package-json name entries extra-dependencies)
+(define (bundle-dependency bundle bundle-sources)
+  "Return (NAME . VERSION-OR-LOCAL-SOURCE) for BUNDLE."
+  (let ((name (dsh-bundle-package-name bundle)))
+    (cons name
+          (if (assoc-ref bundle-sources name)
+              (string-append "file:vendor/" (sanitize-name name))
+              (dsh-bundle-package-version bundle)))))
+
+(define (profile-package-json name entries extra-dependencies bundle-sources)
   "Return the generated DSH profile package.json text."
   (let* ((dependencies
           (append
            (map (lambda (bundle)
-                  (cons (dsh-bundle-package-name bundle)
-                        (dsh-bundle-package-version bundle)))
+                  (bundle-dependency bundle bundle-sources))
                 (profile-dependencies entries))
            extra-dependencies))
          (dependency-text
@@ -171,12 +178,24 @@ autoInstallPeers: "
         (copy-file #$(cdr patch)
                    (string-append #$output "/" #$destination)))))
 
-(define (profile-source name entries package-patches auto-install-peers? extra-dependencies)
+(define (bundle-source-copy bundle bundle-sources)
+  "Return a gexp copying BUNDLE's patched package tree to vendor/."
+  (let* ((name (dsh-bundle-package-name bundle))
+         (source (assoc-ref bundle-sources name)))
+    (and source
+         #~(begin
+             (mkdir-p (string-append #$output "/vendor"))
+             (copy-recursively #$source
+                               (string-append #$output "/vendor/"
+                                              #$(sanitize-name name))
+                               #:follow-symlinks? #f)))))
+
+(define (profile-source name entries package-patches auto-install-peers? extra-dependencies bundle-sources)
   "Return a directory file-like containing the generated profile manifest,
 workspace config, and package patches."
   (let* ((package-json (plain-file (string-append "dsh-profile-" name
                                                   "-package.json")
-                                   (profile-package-json name entries extra-dependencies)))
+                                   (profile-package-json name entries extra-dependencies bundle-sources)))
          (workspace (plain-file (string-append "dsh-profile-" name
                                                "-pnpm-workspace.yaml")
                                 (profile-workspace-yaml package-patches auto-install-peers?))))
@@ -189,6 +208,9 @@ workspace config, and package patches."
                        (string-append #$output "/package.json"))
             (copy-file #$workspace
                        (string-append #$output "/pnpm-workspace.yaml"))
+            #$@(filter-map (lambda (bundle)
+                             (bundle-source-copy bundle bundle-sources))
+                           (profile-dependencies entries))
             #$@(map patch-copy
                     (iota (length package-patches))
                     package-patches))))))
@@ -234,6 +256,7 @@ for (const line of lines) {
                       specs-hash
                       (package-patches '())
                       (extra-dependencies '())
+                      (bundle-sources '())
                       (auto-install-peers? #f))
   "Return a profile artifact for NAME.
 
@@ -252,7 +275,7 @@ package spec to patch file-like applied by pnpm during closure installation."
   (let* ((profile-name name)
          (external? (pair? (profile-dependencies bundles)))
          (profile-root (or root (dsh-profile-default-root name)))
-         (source-dir (profile-source profile-name bundles package-patches auto-install-peers? extra-dependencies))
+         (source-dir (profile-source profile-name bundles package-patches auto-install-peers? extra-dependencies bundle-sources))
          (closure (and external?
                        (pnpm-closure #:source source-dir
                                      #:workspace "pnpm-workspace.yaml"
