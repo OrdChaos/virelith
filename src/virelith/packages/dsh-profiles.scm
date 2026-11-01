@@ -61,15 +61,33 @@
   "Return external descriptor dependencies in declaration order."
   (filter dsh-bundle-package? entries))
 
-(define (profile-package-json name entries)
+(define (patch-file-name index patch)
+  "Return the relative patch path for PATCH at INDEX."
+  (string-append "patches/"
+                 (number->string index)
+                 "-"
+                 (sanitize-name (car patch))
+                 ".patch"))
+
+(define (package-patch-name index patch)
+  "Return (SPEC . RELATIVE-PATCH-PATH) for PATCH at INDEX."
+  (cons (car patch) (patch-file-name index patch)))
+
+(define (profile-package-json name entries extra-dependencies)
   "Return the generated DSH profile package.json text."
-  (let* ((dependencies (profile-dependencies entries))
+  (let* ((dependencies
+          (append
+           (map (lambda (bundle)
+                  (cons (dsh-bundle-package-name bundle)
+                        (dsh-bundle-package-version bundle)))
+                (profile-dependencies entries))
+           extra-dependencies))
          (dependency-text
           (string-join
-           (map (lambda (bundle)
+           (map (lambda (dependency)
                   (format #f "\"~a\": \"~a\""
-                          (json-escape (dsh-bundle-package-name bundle))
-                          (json-escape (dsh-bundle-package-version bundle))))
+                          (json-escape (car dependency))
+                          (json-escape (cdr dependency))))
                 dependencies)
            ",\n    "))
          (bundle-text
@@ -97,7 +115,6 @@
             (json-escape name)
             dependency-text
             bundle-text)))
-
 (define (profile-expected-text entries)
   "Return one `NAME<TAB>VERSION` line per external descriptor."
   (string-join
@@ -121,19 +138,48 @@
       (error "duplicate DSH bundle name in profile" names)))
   entries)
 
-(define (profile-source name entries)
-  "Return a directory file-like containing the generated profile manifest and
-workspace config."
-  (let* ((package-json (plain-file (string-append "dsh-profile-" name
-                                                  "-package.json")
-                                   (profile-package-json name entries)))
-         (workspace (plain-file (string-append "dsh-profile-" name
-                                               "-pnpm-workspace.yaml")
-                                "packages:
+(define (profile-workspace-yaml package-patches auto-install-peers?)
+  "Return pnpm-workspace.yaml with optional patchedDependencies."
+  (let ((patches
+         (if (null? package-patches)
+             ""
+             (string-append
+              "patchedDependencies:\n"
+              (string-join
+               (map (lambda (index patch)
+                      (let ((named (package-patch-name index patch)))
+                        (format #f "  '~a': '~a'"
+                                (car named)
+                                (cdr named))))
+                    (iota (length package-patches))
+                    package-patches)
+               "\n")
+              "\n"))))
+    (string-append
+     "packages:
   - .
 nodeLinker: hoisted
-autoInstallPeers: false
-")))
+autoInstallPeers: "
+     (if auto-install-peers? "true" "false")
+     "\n"
+     patches)))
+(define (patch-copy index patch)
+  "Return a gexp copying PATCH to its profile-relative path."
+  (let ((destination (patch-file-name index patch)))
+    #~(begin
+        (mkdir-p (string-append #$output "/patches"))
+        (copy-file #$(cdr patch)
+                   (string-append #$output "/" #$destination)))))
+
+(define (profile-source name entries package-patches auto-install-peers? extra-dependencies)
+  "Return a directory file-like containing the generated profile manifest,
+workspace config, and package patches."
+  (let* ((package-json (plain-file (string-append "dsh-profile-" name
+                                                  "-package.json")
+                                   (profile-package-json name entries extra-dependencies)))
+         (workspace (plain-file (string-append "dsh-profile-" name
+                                               "-pnpm-workspace.yaml")
+                                (profile-workspace-yaml package-patches auto-install-peers?))))
     (computed-file (string-append "dsh-profile-" name "-source")
       (with-imported-modules '((guix build utils))
         #~(begin
@@ -142,8 +188,10 @@ autoInstallPeers: false
             (copy-file #$package-json
                        (string-append #$output "/package.json"))
             (copy-file #$workspace
-                       (string-append #$output "/pnpm-workspace.yaml")))))))
-
+                       (string-append #$output "/pnpm-workspace.yaml"))
+            #$@(map patch-copy
+                    (iota (length package-patches))
+                    package-patches))))))
 (define %validate-profile-script
   (plain-file
    "validate-dsh-profile.js"
@@ -183,21 +231,28 @@ for (const line of lines) {
                       (bundles '())
                       patch
                       root
-                      specs-hash)
+                      specs-hash
+                      (package-patches '())
+                      (extra-dependencies '())
+                      (auto-install-peers? #f))
   "Return a profile artifact for NAME.
 
 BUNDLES is the ordered list of in-box bundle name strings and external
 dsh-npm-bundle descriptors.  PATCH is the profile cordis.patch.yml.  ROOT is
 the fixed pnpm install root (defaults to a name-derived path).  SPECS-HASH is
 the recursive sha256 of the fixed-output external closure and is required only
-when BUNDLES contains external descriptors."
+when BUNDLES contains external descriptors.  PACKAGE-PATCHES is an alist of
+package spec to patch file-like applied by pnpm during closure installation."
   (validate-profile-entries bundles)
   (when (and (pair? (profile-dependencies bundles)) (not specs-hash))
     (error "dsh-profile: external bundles require #:specs-hash" name))
+  (when (and (pair? package-patches)
+             (null? (profile-dependencies bundles)))
+    (error "dsh-profile: package patches require external bundles" name))
   (let* ((profile-name name)
          (external? (pair? (profile-dependencies bundles)))
          (profile-root (or root (dsh-profile-default-root name)))
-         (source-dir (profile-source profile-name bundles))
+         (source-dir (profile-source profile-name bundles package-patches auto-install-peers? extra-dependencies))
          (closure (and external?
                        (pnpm-closure #:source source-dir
                                      #:workspace "pnpm-workspace.yaml"
