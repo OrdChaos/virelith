@@ -3,7 +3,7 @@
 ;;; A bundle descriptor is not a complete profile dependency closure.  It
 ;;; pins the npm tarball, validates the package manifest and DSH bundle patch,
 ;;; and exposes the bundle identity as package properties.  Profile resolution
-;;; (pnpm lockfile + node_modules) is a separate layer so peer dependencies and
+;;; (pnpm closure + specs hash) is a separate layer so peer dependencies and
 ;;; pnpm's virtual-store layout stay profile-wide.
 ;;;
 ;;; Versions and hashes are pinned manually; evaluation never queries the npm

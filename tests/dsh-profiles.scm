@@ -9,10 +9,15 @@
              (guix gexp)
              (guix packages)
              (virelith packages dsh-bundles)
-             (virelith packages dsh-profiles))
+             (virelith packages dsh-profiles)
+             (virelith packages pnpm-deps))
 
 (define %dummy-hash
   (base32 "07xq1p7mhyyrmya1b4rqrjn7i2szmrs653493lgvp1rs33qlzfd2"))
+
+(define %closure
+  (pnpm-closure #:source (plain-file "source" "")
+                #:hash %dummy-hash))
 
 (define %plugin
   (dsh-npm-bundle "@example/foo" "1.2.3" %dummy-hash))
@@ -21,9 +26,13 @@
   (dsh-profile "unit-test"
                #:bundles (list "@deepseek-ai/dsh-base"
                                %plugin)
-               #:lockfile (plain-file "pnpm-lock.yaml" "lockfileVersion: '9.0'\n")
                #:patch (plain-file "cordis.patch.yml" "[]\n")
-               #:node-modules-hash %dummy-hash))
+               #:specs-hash %dummy-hash))
+
+(define %inbox-profile
+  (dsh-profile "inbox-test"
+               #:bundles (list "@deepseek-ai/dsh-base")
+               #:patch (plain-file "cordis.patch.yml" "[]\n")))
 
 (test-runner-current (test-runner-simple))
 
@@ -38,5 +47,24 @@
 (test-assert "profile artifact exposes the plugin descriptor"
   (and (dsh-bundle-package? %plugin)
        (string=? "@example/foo" (dsh-bundle-package-name %plugin))))
+
+(test-assert "external bundles require specs-hash"
+  (catch #t
+    (lambda ()
+      (dsh-profile "missing-hash"
+                   #:bundles (list %plugin)
+                   #:patch (plain-file "cordis.patch.yml" "[]\n"))
+      #f)
+    (lambda args #t)))
+
+(test-assert "in-box-only profile needs no specs-hash"
+  (and (package? %inbox-profile)
+       (string=? "dsh-profile-inbox-test"
+                 (package-name %inbox-profile))))
+
+(test-assert "pnpm closure has no lockfile input"
+  (let ((uri (origin-uri %closure)))
+    (and (= (length uri) 5)
+         (string=? (cadr uri) "pnpm-workspace.yaml"))))
 
 (test-end "dsh-profiles")

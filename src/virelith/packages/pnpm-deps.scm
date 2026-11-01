@@ -26,7 +26,9 @@
   #:use-module (virelith packages nodejs) ;pnpm
   #:export (%pnpm-build-root
             pnpm-install-method
-            pnpm-install))
+            pnpm-install
+            pnpm-closure-method
+            pnpm-closure))
 
 ;; Keep this path stable: pnpm install shims embed it, and the fixed-output
 ;; hash depends on it.  The consuming package must build at the same path.
@@ -137,6 +139,94 @@ shims are made Guix-compatible before the tree is hashed."
                              "TMPDIR")
          #:local-build? #t)))))
 
+(define* (pnpm-closure-method uri hash-algo hash
+                              #:optional (name "pnpm-closure")
+                              #:key (system (%current-system))
+                              (guile (default-guile)))
+  "Return a fixed-output derivation containing SOURCE after a non-frozen pnpm
+install.  URI is a (SOURCE WORKSPACE PNPM NODE ROOT) tuple.  The generated
+lockfile is left in the output for inspection; dependency resolution is pinned
+only by the recursive output hash."
+  (match uri
+    ((source workspace pnpm node root)
+     (unless (and (string? workspace) (string? root))
+       (error "pnpm-closure-method: workspace/root must be strings"
+              workspace root))
+     (mlet %store-monad ((guile (package->derivation guile system #:graft? #f)))
+       (gexp->derivation name
+         (with-imported-modules '((guix build utils))
+           #~(begin
+               (use-modules (guix build utils))
+               (let* ((root #$root)
+                      (home (string-append root "-home"))
+                      (cache (string-append root "-cache"))
+                      (store (string-append root "-store"))
+                      (source #$source))
+                 (for-each (lambda (path)
+                             (when (file-exists? path)
+                               (delete-file-recursively path)))
+                           (list root home cache store))
+                 (mkdir-p root)
+                 (mkdir-p home)
+                 (mkdir-p cache)
+                 (copy-recursively source root #:follow-symlinks? #f)
+                 (unless (file-exists? (string-append root "/" #$workspace))
+                   (error "workspace file missing from pnpm closure source"
+                          #$workspace))
+                 (setenv "HOME" home)
+                 (setenv "XDG_CACHE_HOME" cache)
+                 (setenv "npm_config_cache" (string-append cache "/npm"))
+                 (setenv "pnpm_config_pm_on_fail" "ignore")
+                 (setenv "pnpm_config_ignore_scripts" "true")
+                 (setenv "CI" "true")
+                 (setenv "PATH"
+                         (string-append #$(file-append node "/bin") ":"
+                                        #$(file-append pnpm "/bin") ":"
+                                        (getenv "PATH")))
+                 (with-directory-excursion root
+                   (invoke #$(file-append pnpm "/bin/pnpm")
+                           "install"
+                           "--ignore-scripts"
+                           "--store-dir" store
+                           "--package-import-method=copy"
+                           "--reporter=append-only"))
+                 (for-each (lambda (file)
+                             (when (file-exists? file)
+                               (delete-file file)))
+                           (list (string-append root
+                                                "/node_modules/.modules.yaml")
+                                 (string-append
+                                  root
+                                  "/node_modules/.pnpm-workspace-state-v1.json")))
+                 (for-each
+                  (lambda (file)
+                    (substitute* file
+                      (("#!/bin/sh")
+                       (string-append "#!"
+                                      #$(file-append bash-minimal "/bin/sh")))
+                      (("#!/usr/bin/env node")
+                       (string-append "#!"
+                                      #$(file-append node "/bin/node")))
+                      (("#!/usr/bin/env bash")
+                       (string-append "#!"
+                                      #$(file-append bash-minimal "/bin/bash")))
+                      (("command -p ") "")))
+                  (find-files root
+                              (lambda (file stat)
+                                (and (eq? 'regular (stat:type stat))
+                                     (string-contains file "/.bin/")))))
+                 (copy-recursively root #$output
+                                   #:follow-symlinks? #f))))
+         #:system system
+         #:graft? #f
+         #:hash-algo hash-algo
+         #:hash hash
+         #:recursive? #t
+         #:guile-for-build guile
+         #:leaked-env-vars '("http_proxy" "https_proxy" "no_proxy"
+                             "TMPDIR")
+         #:local-build? #t)))))
+
 (define* (pnpm-install #:key source
                        (lockfile "pnpm-lock.yaml")
                        (workspace "pnpm-workspace.yaml")
@@ -152,4 +242,19 @@ and must be unique per concurrently built profile."
     (method pnpm-install-method)
     (uri (list source lockfile workspace pnpm node root))
     (file-name "pnpm-node-modules")
+    (sha256 hash)))
+
+(define* (pnpm-closure #:key source
+                       (workspace "pnpm-workspace.yaml")
+                       (pnpm pnpm)
+                       (node node)
+                       (root %pnpm-build-root)
+                       hash)
+  "Return a fixed-output origin holding SOURCE after a non-frozen pnpm
+install.  HASH is the recursive sha256 of the installed tree.  ROOT is the
+fixed install directory embedded in pnpm shims."
+  (origin
+    (method pnpm-closure-method)
+    (uri (list source workspace pnpm node root))
+    (file-name "pnpm-closure")
     (sha256 hash)))

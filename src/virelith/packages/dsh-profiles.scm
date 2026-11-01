@@ -2,15 +2,16 @@
 ;;;
 ;;; A profile is the dependency-resolution boundary.  Bundle descriptors pin
 ;;; individual npm tarballs and validate their manifests; this module composes
-;;; an ordered bundle list, generates the DSH profile manifest, installs the
-;;; profile lockfile into node_modules once, and emits an immutable profile
-;;; artifact.  In-box bundle names are allowed and are resolved by DSH itself;
-;;; only external bundles need profile node_modules entries.
+;;; an ordered bundle list, generates the DSH profile manifest, resolves the
+;;; external dependency closure once into a fixed-output tree, and emits an
+;;; immutable profile artifact.  In-box bundle names are allowed and are
+;;; resolved by DSH itself; only external bundles need profile node_modules.
 ;;;
-;;; The profile lockfile and node-modules hash are pinned by the caller.  The
-;;; fixed-output install runs at a profile-specific absolute root because pnpm
-;;; shims embed that path; the artifact build retargets the shims to the final
-;;; store path.
+;;; There is no committed pnpm lockfile.  The caller pins the complete external
+;;; closure with SPECS-HASH; pnpm resolves it at build time and the fixed-output
+;;; hash makes the result reproducible.  The generated lockfile stays in the
+;;; store artifact for inspection.  If no external descriptors are present, the
+;;; entire pnpm path is skipped.
 
 (define-module (virelith packages dsh-profiles)
   #:use-module (gnu packages base) ;coreutils
@@ -120,9 +121,9 @@
       (error "duplicate DSH bundle name in profile" names)))
   entries)
 
-(define (profile-source name entries lockfile)
-  "Return a directory file-like containing the generated profile manifest,
-workspace config, and LOCKFILE."
+(define (profile-source name entries)
+  "Return a directory file-like containing the generated profile manifest and
+workspace config."
   (let* ((package-json (plain-file (string-append "dsh-profile-" name
                                                   "-package.json")
                                    (profile-package-json name entries)))
@@ -141,9 +142,7 @@ autoInstallPeers: false
             (copy-file #$package-json
                        (string-append #$output "/package.json"))
             (copy-file #$workspace
-                       (string-append #$output "/pnpm-workspace.yaml"))
-            (copy-file #$lockfile
-                       (string-append #$output "/pnpm-lock.yaml")))))))
+                       (string-append #$output "/pnpm-workspace.yaml")))))))
 
 (define %validate-profile-script
   (plain-file
@@ -182,26 +181,28 @@ for (const line of lines) {
 (define* (dsh-profile name
                       #:key
                       (bundles '())
-                      lockfile
                       patch
                       root
-                      node-modules-hash)
+                      specs-hash)
   "Return a profile artifact for NAME.
 
 BUNDLES is the ordered list of in-box bundle name strings and external
-dsh-npm-bundle descriptors.  LOCKFILE is the pnpm lockfile file-like for the
-generated profile manifest, PATCH is the profile cordis.patch.yml, ROOT is the
-fixed pnpm install root (defaults to a name-derived path), and
-NODE-MODULES-HASH is the recursive sha256 of the fixed-output installed tree."
+dsh-npm-bundle descriptors.  PATCH is the profile cordis.patch.yml.  ROOT is
+the fixed pnpm install root (defaults to a name-derived path).  SPECS-HASH is
+the recursive sha256 of the fixed-output external closure and is required only
+when BUNDLES contains external descriptors."
   (validate-profile-entries bundles)
+  (when (and (pair? (profile-dependencies bundles)) (not specs-hash))
+    (error "dsh-profile: external bundles require #:specs-hash" name))
   (let* ((profile-name name)
+         (external? (pair? (profile-dependencies bundles)))
          (profile-root (or root (dsh-profile-default-root name)))
-         (source-dir (profile-source profile-name bundles lockfile))
-         (installed (pnpm-install #:source source-dir
-                                  #:lockfile "pnpm-lock.yaml"
-                                  #:workspace "pnpm-workspace.yaml"
-                                  #:root profile-root
-                                  #:hash node-modules-hash))
+         (source-dir (profile-source profile-name bundles))
+         (closure (and external?
+                       (pnpm-closure #:source source-dir
+                                     #:workspace "pnpm-workspace.yaml"
+                                     #:root profile-root
+                                     #:hash specs-hash)))
          (expected (plain-file (string-append "dsh-profile-" profile-name
                                               "-expected.txt")
                                (profile-expected-text bundles)))
@@ -219,33 +220,34 @@ NODE-MODULES-HASH is the recursive sha256 of the fixed-output installed tree."
             (use-modules (guix build utils))
             (let* ((out #$output)
                    (dir (string-append out "/" #$profile-dir))
-                   (node-modules (string-append dir "/node_modules"))
-                   (source-dir #$source-dir)
-                   (installed #$installed))
+                   (source-dir #$source-dir))
               (mkdir-p dir)
-              (copy-recursively (string-append installed "/node_modules")
-                                node-modules
-                                #:follow-symlinks? #f)
-              (invoke #$(file-append coreutils "/bin/chmod")
-                      "-R" "u+w" node-modules)
-              ;; pnpm shims embed the fixed install root; retarget them to
-              ;; the immutable profile artifact.
-              (for-each
-               (lambda (file)
-                 (substitute* file
-                   ((#$profile-root) node-modules)))
-               (find-files node-modules
-                           (lambda (file stat)
-                             (and (eq? 'regular (stat:type stat))
-                                  (string-contains file "/.bin/")))))
               (copy-file (string-append source-dir "/package.json")
                          (string-append dir "/package.json"))
               (copy-file (string-append source-dir "/pnpm-workspace.yaml")
                          (string-append dir "/pnpm-workspace.yaml"))
               (copy-file #$patch (string-append dir "/cordis.patch.yml"))
-              (invoke #$(file-append node-lts "/bin/node")
-                      #$%validate-profile-script
-                      node-modules #$expected)))))
+              (when #$(if external? #t #f)
+                (let ((node-modules (string-append dir "/node_modules"))
+                      (installed #$closure))
+                  (copy-recursively (string-append installed "/node_modules")
+                                    node-modules
+                                    #:follow-symlinks? #f)
+                  (invoke #$(file-append coreutils "/bin/chmod")
+                          "-R" "u+w" node-modules)
+                  ;; pnpm shims embed the fixed install root; retarget them
+                  ;; to the immutable profile artifact.
+                  (for-each
+                   (lambda (file)
+                     (substitute* file
+                       ((#$profile-root) node-modules)))
+                   (find-files node-modules
+                               (lambda (file stat)
+                                 (and (eq? 'regular (stat:type stat))
+                                      (string-contains file "/.bin/")))))
+                  (invoke #$(file-append node-lts "/bin/node")
+                          #$%validate-profile-script
+                          node-modules #$expected)))))))
       (native-inputs (list node-lts coreutils))
       (supported-systems '("x86_64-linux" "aarch64-linux"))
       (home-page "https://github.com/deepseek-ai/deepseek-harness")
