@@ -257,6 +257,7 @@ for (const line of lines) {
                       (package-patches '())
                       (extra-dependencies '())
                       (bundle-sources '())
+                      (runtime-scope #f)
                       (auto-install-peers? #f))
   "Return a profile artifact for NAME.
 
@@ -265,7 +266,9 @@ dsh-npm-bundle descriptors.  PATCH is the profile cordis.patch.yml.  ROOT is
 the fixed pnpm install root (defaults to a name-derived path).  SPECS-HASH is
 the recursive sha256 of the fixed-output external closure and is required only
 when BUNDLES contains external descriptors.  PACKAGE-PATCHES is an alist of
-package spec to patch file-like applied by pnpm during closure installation."
+package spec to patch file-like applied by pnpm during closure installation.
+RUNTIME-SCOPE, when supplied, is linked as node_modules/@deepseek-ai so
+peer imports share the launching DSH runtime instead of a second copy."
   (validate-profile-entries bundles)
   (when (and (pair? (profile-dependencies bundles)) (not specs-hash))
     (error "dsh-profile: external bundles require #:specs-hash" name))
@@ -323,6 +326,11 @@ package spec to patch file-like applied by pnpm during closure installation."
                                (lambda (file stat)
                                  (and (eq? 'regular (stat:type stat))
                                       (string-contains file "/.bin/")))))
+                  (when #$(if runtime-scope #t #f)
+                    (let ((scope (string-append node-modules "/@deepseek-ai")))
+                      (when (file-exists? scope)
+                        (error "dsh-profile: @deepseek-ai already exists in node_modules" scope))
+                      (symlink #$runtime-scope scope)))
                   (invoke #$(file-append node-lts "/bin/node")
                           #$%validate-profile-script
                           node-modules #$expected)))))))
