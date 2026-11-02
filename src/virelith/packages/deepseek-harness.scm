@@ -13,6 +13,7 @@
 
 (define-module (virelith packages deepseek-harness)
   #:use-module (gnu packages bash) ;bash-minimal
+  #:use-module (gnu packages base) ;patch
   #:use-module (gnu packages gcc) ;gcc
   #:use-module (gnu packages node) ;node
   #:use-module (gnu packages pkg-config) ;pkg-config
@@ -46,7 +47,8 @@
     (file-name (string-append "deepseek-harness-"
                               %deepseek-harness-version
                               ".tar.gz"))
-    (sha256 %deepseek-harness-source-hash)))
+    (sha256 %deepseek-harness-source-hash)
+    (patches (list (local-file "patches/config-editor-home.patch")))))
 
 (define %deepseek-harness-node-modules
   (pnpm-install #:source %deepseek-harness-source
@@ -86,6 +88,11 @@
                                   #:follow-symlinks? #f)
                 (invoke "chmod" "-R" "u+w" root)
                 (chdir root)
+                ;; The build root comes from the pinned pnpm closure, not the
+                ;; unpacked source; apply the source patch to that tree too.
+                (invoke #$(file-append patch "/bin/patch")
+                        "-p1" "-i"
+                        #$(local-file "patches/config-editor-home.patch"))
                 ;; The native addon build invokes `cc' directly.
                 (let ((tools "/tmp/guix-dsh-build-tools"))
                   (when (file-exists? tools)
@@ -172,7 +179,7 @@
                 (invoke (string-append out "/bin/dsh") "--version")))))))
     (native-inputs
      (list node pnpm %deepseek-harness-node-modules
-           gcc python-minimal pkg-config git-minimal bash-minimal))
+           gcc patch python-minimal pkg-config git-minimal bash-minimal))
     (supported-systems '("x86_64-linux"))
     (home-page "https://github.com/deepseek-ai/deepseek-harness")
     (synopsis "AI agent harness with a plugin-based architecture")
