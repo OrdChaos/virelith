@@ -26,9 +26,9 @@
 
 (test-begin "carapace")
 
-(test-equal "package version" "1.8.1" (package-version carapace-bin))
+(test-equal "package version" "1.8.2" (package-version carapace-bin))
 (test-equal "pinned release commit"
-  "6bc2b8d69a2474b6eeb626a85ef83254c2ab7d82"
+  "ff108d6122f0cb441622fc412770e84a65078bdb"
   (git-reference-commit (origin-uri (package-source carapace-bin))))
 (test-assert "go build system"
   (eq? go-build-system (package-build-system carapace-bin)))
@@ -51,7 +51,7 @@
   (let ((args (object->string (argument carapace-bin 'phases))))
     (and (string-contains args "set-version")
          (string-contains args "develop")
-          (string-contains args "1.8.1"))))
+          (string-contains args "1.8.2"))))
 (test-assert "force_all completer registry"
   (string-contains (object->string (argument carapace-bin 'build-flags))
                    "force_all"))
@@ -107,7 +107,7 @@
                go-github-com-carapace-sh-carapace-jjlex
                go-github-com-carapace-sh-carapace-pnpm)))
 
-(test-equal "carapace library version" "1.17.0-alpha"
+(test-equal "carapace library version" "1.17.2"
   (package-version go-github-com-carapace-sh-carapace))
 
 (test-end "carapace")

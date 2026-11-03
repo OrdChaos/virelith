@@ -83,7 +83,7 @@ command lines for completion.")
   (package
     (inherit go-github-com-carapace-sh-carapace-shlex)
     (name "go-github-com-carapace-sh-carapace-shlex-v2")
-    (version "2.0.0")
+    (version "2.1.4")
     (source
      (origin
        (method git-fetch)
@@ -92,7 +92,7 @@ command lines for completion.")
              (commit (string-append "v" version))))
        (file-name (git-file-name name version))
        (sha256
-        (base32 "0jday1pss1gb728magnn5s70d3amivvm6v4z4sg8df07v5zpa46q"))))
+        (base32 "0w0raic448q1jfc7qn7q28ys1qpjkn8989vcx81nfb30fp6bnrkz"))))
     (arguments
      (list #:import-path "github.com/carapace-sh/carapace-shlex/v2"
            #:tests? #f))))
@@ -100,7 +100,7 @@ command lines for completion.")
 (define-public go-github-com-carapace-sh-carapace
   (package
     (name "go-github-com-carapace-sh-carapace")
-    (version "1.17.0-alpha")
+    (version "1.17.2")
     (source
      (origin
        (method git-fetch)
@@ -109,7 +109,7 @@ command lines for completion.")
              (commit (string-append "v" version))))
        (file-name (git-file-name name version))
        (sha256
-         (base32 "1hf1rbpg085fjdz5wn0d487a8j75rlyczpwx5zzxl2iqqg3pc8qv"))))
+         (base32 "0c94xmy7la6n0vyly1ibcln7wvg223zl9jscsgbi8kblqyfbvvvq"))))
     (build-system go-build-system)
     (arguments
      (list
@@ -132,7 +132,7 @@ and resolved as-is from the source tree.")
 (define-public go-github-com-carapace-sh-carapace-bridge
   (package
     (name "go-github-com-carapace-sh-carapace-bridge")
-    (version "1.8.0-alpha")
+    (version "1.8.0")
     (source
      (origin
        (method git-fetch)
@@ -141,7 +141,7 @@ and resolved as-is from the source tree.")
              (commit (string-append "v" version))))
        (file-name (git-file-name name version))
        (sha256
-         (base32 "1qn77xi2crp8r8rprz0lqk0577qqi95pgmwmq8jdbhri0hx5m4fg"))))
+         (base32 "1q5wsaznpmlzbg14ac13rdxaczjsl5hrlv4kz7ajnyi46glqy42m"))))
     (build-system go-build-system)
     (arguments
      (list
@@ -160,7 +160,7 @@ carapace-bin compiles the packages it needs.")
 (define-public go-github-com-carapace-sh-carapace-spec
   (package
     (name "go-github-com-carapace-sh-carapace-spec")
-    (version "1.10.0-alpha")
+    (version "1.10.0")
     (source
      (origin
        (method git-fetch)
@@ -169,7 +169,7 @@ carapace-bin compiles the packages it needs.")
              (commit (string-append "v" version))))
        (file-name (git-file-name name version))
        (sha256
-         (base32 "0nkwbl9i8xln6n5wx6x9q0qjbcr7qasgiqc7vhhgw6rmirwabfxk"))))
+         (base32 "0fq46d2z3nmhsy4c8lb9jqlk1yqngqv5nv5140c8mx57q9xy1jx0"))))
     (build-system go-build-system)
     (arguments
      (list
@@ -303,9 +303,9 @@ replacement.")
 ;;; compilation; see the file header and the origin patch.
 
 ;; Bump VERSION/COMMIT/hash together when updating.
-(define %carapace-bin-version "1.8.1")
+(define %carapace-bin-version "1.8.2")
 (define %carapace-bin-commit
-  "6bc2b8d69a2474b6eeb626a85ef83254c2ab7d82") ; tag v1.8.1
+  "ff108d6122f0cb441622fc412770e84a65078bdb") ; tag v1.8.2
 
 (define-public carapace-bin
   (package
@@ -319,7 +319,7 @@ replacement.")
              (commit %carapace-bin-commit)))
        (file-name (git-file-name name version))
        (sha256
-         (base32 "0k8wpwfg9lzmmjwkg7ylwb4w7bskraphr127iv37l9bwnxlqzydk"))
+         (base32 "162msf5vwqmfp4ivw9pscj990wn1lpzr2ggk7skc6wmab8cd1m85"))
        ;; Make the code generator work under GO111MODULE=off; see the patch.
        (patches
         (search-patches

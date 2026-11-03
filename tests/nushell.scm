@@ -27,14 +27,14 @@
 
 (test-begin "nushell")
 
-(test-equal "package version" "0.115.1" (package-version nushell))
+(test-equal "package version" "0.116.1" (package-version nushell))
 (test-equal "pinned release commit"
-  "798c55d19505fd52f205d7eb32a571b9d06ec9e6"
+  "b632ef0994e07b5176ec45171e8cee2c127c5563"
   (git-reference-commit (origin-uri (package-source nushell))))
 (test-assert "cargo build system"
   (eq? cargo-build-system (package-build-system nushell)))
 (test-assert "full Cargo.lock closure is vendored"
-  (= 991 (length (crate-inputs nushell))))
+  (= 984 (length (crate-inputs nushell))))
 (test-assert "builds workspace plugin binaries"
   (string-contains (object->string (argument nushell 'cargo-build-flags))
                    "--workspace"))

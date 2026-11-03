@@ -1,12 +1,12 @@
 ;;; Nushell for Virelith.
 ;;;
 ;;; Built from source with Guix's cargo-build-system instead of patching the
-;;; upstream prebuilt binaries.  The full Cargo.lock of Nushell 0.115.1 (991
-;;; registry crates, no git dependencies) is vendored offline from
-;;; (virelith packages nushell-crates); the Cargo.lock is dropped by the
-;;; build system so Cargo resolves against exactly the vendored versions.
+;;; upstream prebuilt binaries.  The full Cargo.lock of Nushell 0.116.1 (984
+;;; registry crates out of 1030 lock entries, no git dependencies) is vendored
+;;; offline from (virelith packages nushell-crates); the Cargo.lock is dropped
+;;; by the build system so Cargo resolves against exactly the vendored versions.
 ;;;
-;;; Rust 1.95 matches the workspace `rust-version = "1.95.0"`.  The default
+;;; Rust 1.96 matches the workspace `rust-version = "1.96.1"`.  The default
 ;;; feature set is kept (helix, lsp, mcp, network, plugin, rustls-tls,
 ;;; sqlite, trash-support) so the binary matches the upstream release.
 ;;;
@@ -28,7 +28,7 @@
   #:use-module (gnu packages compression)   ; zlib, zstd
   #:use-module (gnu packages llvm)           ; clang
   #:use-module (gnu packages pkg-config)
-  #:use-module (gnu packages rust)           ; rust-1.95
+  #:use-module (gnu packages rust)           ; rust-1.96
   #:use-module (gnu packages sqlite)
   #:use-module (gnu packages ssh)            ; libssh2
   #:use-module (gnu packages tls)            ; openssl
@@ -45,9 +45,9 @@
 
 ;; Bump VERSION/COMMIT together when updating the package, and regenerate
 ;; (virelith packages nushell-crates) from the new Cargo.lock.
-(define %nushell-version "0.115.1")
+(define %nushell-version "0.116.1")
 (define %nushell-commit
-  "798c55d19505fd52f205d7eb32a571b9d06ec9e6") ; tag 0.115.1
+  "b632ef0994e07b5176ec45171e8cee2c127c5563") ; tag 0.116.1
 
 (define %nushell-plugin-names
   '("nu_plugin_custom_values"
@@ -71,11 +71,11 @@
              (commit %nushell-commit)))
        (file-name (git-file-name name version))
        (sha256
-        (base32 "028faspfc3nfvk6cm093dwi6lls1kkmsfimsz3z8j3vjdnsnyxxa"))))
+        (base32 "0aqy4fkwwbz5mh8ibdckxq7knp1m866bn8xpl4y2ybpv4c48ibbg"))))
     (build-system cargo-build-system)
     (arguments
      (list
-      #:rust rust-1.95
+      #:rust rust-1.96
        ;; The suite is huge and exercises plugin IPC against built binaries;
        ;; the sandbox build verifies compilation and installation instead.
        #:tests? #f

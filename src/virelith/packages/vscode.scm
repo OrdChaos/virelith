@@ -28,9 +28,9 @@
   #:use-module (ice-9 match))
 
 ;; Bump VERSION/SHA256 together when updating the package.
-(define %vscode-version "1.139.1")
+(define %vscode-version "1.144.1")
 (define %vscode-sha256
-  (base32 "0ziva0bwbxiijx6ndnlaywr8w3x807p8ziz55p30z6hf0zmbr70c"))
+  (base32 "1r1zz7p34qsjgwwan1r06cz9kqxa1zda9xiw8ly3ac94vkwxdn2r"))
 
 (define-public vscode
   (package
@@ -50,7 +50,7 @@
       ;; The wrapped binary and bundled libs fail the runpath validation,
       ;; same trade-off as vscodium in nonguix.
       #:validate-runpath? #f
-      ;; ~150MB artifact; do not advertise substitutes we cannot provide.
+      ;; ~340MB artifact; do not advertise substitutes we cannot provide.
       #:substitutable? #f
       ;; Patch the ELF at VSCode-linux-x64/code: RPATH gets every build
       ;; input's /lib plus $out/opt/vscode/VSCode-linux-x64 for the

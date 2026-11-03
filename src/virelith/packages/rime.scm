@@ -234,10 +234,10 @@ without changing downstream package interfaces.")
    #:name "librime-virelith"))
 
 ;; Bump VERSION/COMMIT/SHA256 together when updating the package.
-(define %rime-ice-version "2026.06.30")
-(define %rime-ice-commit "6810e8916d160498620a16fef2135956fecbd485")
+(define %rime-ice-version "2026.10.31")
+(define %rime-ice-commit "99662ba01e3affa6a0f009174ca530b887bac3b6")
 (define %rime-ice-sha256
-  (base32 "1jvnwaaykr78917y4sl8mg8f2f1yn1z0354xm4hxmpx1i0aq25qx"))
+  (base32 "0rcppaqd5af2g876rrn8ynjv7ll3qdl8qp5xj46z122pv0syhfql"))
 
 (define-public rime-ice
   (package
@@ -295,9 +295,9 @@ under @file{share/rime-data} for use as immutable Rime shared data.")
 ;; https://github.com/OrdChaos/RIME-LMDG.snapshot/releases/tag/<version>
 ;; The release asset is immutable per tag, so the fixed-output sha256 is
 ;; stable.  Bump VERSION/SHA256 together with the snapshot tag when refreshing.
-(define %rime-data-wanxiang-version "20260924162904")
+(define %rime-data-wanxiang-version "20261026091209")
 (define %rime-data-wanxiang-sha256
-  (base32 "0nahvngy69391cwhj6kaj6vakvvcbklafb76xlczashdpgsjxg3i"))
+  (base32 "1570zw46drbb30lkvss6fqq67awqpbn945v4l0ww0vb28jmh0ig3"))
 
 (define-public rime-data-wanxiang
   (package

@@ -9,7 +9,7 @@
 ;;; Deviations from the upstream recipe, each checked against the pinned
 ;;; source:
 ;;; - wayland-protocols: the recipe overrides it with a custom 1.48 build,
-;;;   but every protocol XML used by v5.3.0 already ships in
+;;;   but every protocol XML used by v5.4.1 already ships in
 ;;;   Guix's wayland-protocols 1.47, so the system package is used.
 ;;; - native_optimizations (the -march=native/-mtune=native option)
 ;;;   defaults to false and is left off; PACKAGING.md forbids it for
@@ -54,10 +54,10 @@
                #:use-module ((guix licenses) #:prefix license:))
 
 ;; Bump VERSION/COMMIT/SHA256 together when updating the package.
-(define %noctalia-version "5.3.0")
-(define %noctalia-commit "a33122c4208a385e19c9a252e65e2751b2c44fbb")
+(define %noctalia-version "5.4.1")
+(define %noctalia-commit "815aebe1cfd79c9a18197441eea92f0b275035fc")
 (define %noctalia-sha256
-  (base32 "14i92npvw9brc3c1jiv7wfxb2nwx6qw0bsj7hzd36lzlv8zpa8c0"))
+  (base32 "0ih3aizacgi1v5b5qq907p3j6vsx0wjvnf9hc9gqwasb1dqir8cg"))
 
 (define-public noctalia
   (package
@@ -68,7 +68,7 @@
        (method git-fetch)
        (uri (git-reference
              (url "https://github.com/noctalia-dev/noctalia")
-               (commit %noctalia-commit))) ; tag v5.3.0
+               (commit %noctalia-commit))) ; tag v5.4.1
         (file-name (git-file-name name version))
         (sha256 %noctalia-sha256)))
     (build-system meson-build-system)
