@@ -10,14 +10,15 @@
                #:use-module (guix packages))
 
 ;; Bump VERSION/SHA256 together when updating the package.
-(define %tpm2-tss-compat-version "4.2.0")
+(define %tpm2-tss-compat-version "4.2.1")
 (define %tpm2-tss-compat-sha256
-  (base32 "0951zsqss3ndx904dg69h2imqwlgd2lhqh8sf02pzqaciif0qgxm"))
+  (base32 "0w8lzfz36ngakv80rxnz8vs5chwrgpyvp5046xd3hxh8c70xpanl"))
 
 ;; 项目需要比当前 GNU Guix 主线更新的 TPM2 用户态栈。
 ;;
 ;; 4.1.3 + tpm2-tools 5.7 曾通过 guix-config 的 T1/T2/T3 验证。
-;; 4.2.0 + tpm2-tools 5.8 是新的候选组合；升级后必须重新通过
+;; 4.2.1 + tpm2-tools 5.8 是新的候选组合（4.2.1 修复了多项
+;; TCTI/ESYS/FAPI 响应长度与边界检查问题）；升级后必须重新通过
 ;; T1/T2/T3，确认后才视为项目正式验证过的 TPM2 工具链。
 (define-public tpm2-tss-compat
   (package

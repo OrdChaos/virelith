@@ -16,7 +16,7 @@
 (define-module (virelith packages pnpm-deps)
   #:use-module (gnu packages base) ;tar
   #:use-module (gnu packages bash) ;bash-minimal
-  #:use-module (gnu packages compression) ;gzip
+  #:use-module (gnu packages compression) ;gzip, zstd
   #:use-module (gnu packages node) ;node
   #:use-module (guix gexp)
   #:use-module (guix monads)
@@ -69,12 +69,16 @@ shims are made Guix-compatible before the tree is hashed."
                  (mkdir-p cache)
                  (setenv "PATH"
                          (string-append #$(file-append gzip "/bin") ":"
+                                        #$(file-append zstd "/bin") ":"
                                         #$(file-append tar "/bin") ":"
                                         (getenv "PATH")))
                  (if (eq? 'directory (stat:type (stat source)))
                      (copy-recursively source root #:follow-symlinks? #f)
+                     ;; Guix may store a downloaded tarball recompressed as
+                     ;; .tar.zst regardless of the origin's file-name, so let
+                     ;; tar detect the compression instead of forcing gzip.
                      (invoke #$(file-append tar "/bin/tar")
-                             "-xzf" source "-C" root
+                             "-xf" source "-C" root
                              "--strip-components=1"))
                  (when #$(if workspace #t #f)
                    (unless (file-exists? (string-append root "/" #$workspace))

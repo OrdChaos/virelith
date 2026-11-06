@@ -13,7 +13,6 @@
 
 (define-module (virelith packages deepseek-harness)
   #:use-module (gnu packages bash) ;bash-minimal
-  #:use-module (gnu packages base) ;patch
   #:use-module (gnu packages gcc) ;gcc
   #:use-module (gnu packages node) ;node
   #:use-module (gnu packages pkg-config) ;pkg-config
@@ -28,15 +27,15 @@
   #:use-module (virelith packages pnpm-deps)
   #:export (deepseek-harness))
 
-(define %deepseek-harness-version "0.2.1-rc.5")
+(define %deepseek-harness-version "0.2.2-rc.1")
 (define %deepseek-harness-commit
-  "b830ec950faba0a46dda564be3e2d854afed94f1")
+  "66491b05e3f05ad35bcdd4f6cd7ed26041d9e3db")
 (define %deepseek-harness-source-hash
-  (base32 "07xq1p7mhyyrmya1b4rqrjn7i2szmrs653493lgvp1rs33qlzfd2"))
+  (base32 "1wcrspmvfajhv8vk7d0rkhn16ha31bxb49lw4ncjh9v41f950rs1"))
 ;; Bump together with the source, pnpm, node, or bash-minimal version:
 ;; pnpm install shims embed those store paths and %pnpm-build-root.
 (define %deepseek-harness-node-modules-hash
-  (base32 "1p5zd02pb30f88b9i46mb2wr6j13ff7ln8gb18r8mn1y2k40glcr"))
+  (base32 "0d0sn2b49x9h7yyqvazs51p2hdbq0mjxgzk1iz0l35wkwxn8ashn"))
 
 (define %deepseek-harness-source
   (origin
@@ -88,11 +87,8 @@
                                   #:follow-symlinks? #f)
                 (invoke "chmod" "-R" "u+w" root)
                 (chdir root)
-                ;; The build root comes from the pinned pnpm closure, not the
-                ;; unpacked source; apply the source patch to that tree too.
-                (invoke #$(file-append patch "/bin/patch")
-                        "-p1" "-i"
-                        #$(local-file "patches/config-editor-home.patch"))
+                ;; The pinned pnpm closure is built from the patched source,
+                ;; so the build root already contains config-editor-home.patch.
                 ;; The native addon build invokes `cc' directly.
                 (let ((tools "/tmp/guix-dsh-build-tools"))
                   (when (file-exists? tools)
@@ -179,7 +175,7 @@
                 (invoke (string-append out "/bin/dsh") "--version")))))))
     (native-inputs
      (list node pnpm %deepseek-harness-node-modules
-           gcc patch python-minimal pkg-config git-minimal bash-minimal))
+           gcc python-minimal pkg-config git-minimal bash-minimal))
     (supported-systems '("x86_64-linux"))
     (home-page "https://github.com/deepseek-ai/deepseek-harness")
     (synopsis "AI agent harness with a plugin-based architecture")

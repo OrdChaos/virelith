@@ -28,7 +28,7 @@
 (test-assert "deepseek-harness: package shape"
   (and (package? deepseek-harness)
        (string=? "deepseek-harness" (package-name deepseek-harness))
-       (string=? "0.2.1-rc.5" (package-version deepseek-harness))
+       (string=? "0.2.2-rc.1" (package-version deepseek-harness))
        (eq? 'gnu (build-system-name (package-build-system deepseek-harness)))
        (string=? "https://github.com/deepseek-ai/deepseek-harness"
                  (package-home-page deepseek-harness))
@@ -44,7 +44,7 @@
     (and (string? uri)
          (string-contains uri
                           "codeload.github.com/deepseek-ai/deepseek-harness")
-         (string-contains uri "dsh-v0.2.1-rc.5"))))
+         (string-contains uri "dsh-v0.2.2-rc.1"))))
 
 (test-assert "deepseek-harness: fixed pnpm workspace tree input"
   (let ((names (native-input-names deepseek-harness)))
