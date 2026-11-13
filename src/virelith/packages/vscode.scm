@@ -16,12 +16,17 @@
 ;;; fixed-output sha256 will not break on upstream refresh.
 
 (define-module (virelith packages vscode)
+  #:use-module (gnu packages)
   #:use-module (gnu packages base)
   #:use-module (gnu packages bash)
+  #:use-module (gnu packages compression)
+  #:use-module (gnu packages elf)
+  #:use-module (gnu packages gcc)
   #:use-module (gnu packages gtk)
   #:use-module (guix download)
   #:use-module (guix gexp)
   #:use-module (guix packages)
+  #:use-module (guix build-system trivial)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (nonguix build-system chromium-binary)
   #:use-module (nonguix licenses)
@@ -31,6 +36,8 @@
 (define %vscode-version "1.145.2")
 (define %vscode-sha256
   (base32 "18msrxvi7kdh0zkdjiy4bny96ywg84fq2jwlc3c6y0ps75k2h09v"))
+;; The commit id of the same release; used by vscode-server below.
+(define %vscode-commit "c4453f8ea430795f941c1b2ff6c9321135a74a02")
 
 (define-public vscode
   (package
@@ -159,4 +166,74 @@
      "Visual Studio Code is a proprietary source-code editor developed by
 Microsoft.  This package installs the official Linux x64 binary with the
 Nonguix Chromium binary build system.")
+    (license (nonfree "https://code.visualstudio.com/license"))))
+
+;; ── VS Code Server ──────────────────────────────────────────────────
+;; The desktop CLI fetches this tarball at runtime into
+;; ~/.vscode/cli/serve-web/<commit> when `code serve-web` or
+;; `code tunnel` starts.  The upstream bundle is built for FHS: its
+;; bundled `node` has the /lib64 interpreter, so on Guix the server
+;; exits with "cannot execute: required file not found" (and the CLI
+;; cannot run its prerequisite check either: no ldconfig and no
+;; /usr/lib64).  Package the same commit-pinned tarball with `node`
+;; patched once here; the config layer then points the CLI at
+;; $out/server (the CLI reuses an existing <commit> directory instead
+;; of downloading).
+;;
+;; %VSCODE-COMMIT must stay in sync with the desktop package above.
+(define %vscode-server-sha256
+  (base32 "024bigzwrfgrwnp7s5z3b73zww60wlyglrj6w6nvvpbfw7wa6qk9"))
+
+(define-public vscode-server
+  (package
+    (name "vscode-server")
+    (version %vscode-version)
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "https://update.code.visualstudio.com/commit:" %vscode-commit
+             "/server-linux-x64-web/stable"))
+       (file-name "vscode-server-linux-x64-web.tar.gz")
+       (sha256 %vscode-server-sha256)))
+    (build-system trivial-build-system)
+    (arguments
+     (list
+      #:modules '((guix build utils))
+      #:builder
+      #~(begin
+          (use-modules (guix build utils))
+          (let* ((out (string-append #$output "/server"))
+                 (source (assoc-ref %build-inputs "source"))
+                 ;; gcc's C++/gcc_s runtime lives in its "lib" output.
+                 (glibc-lib
+                  (string-append (assoc-ref %build-inputs "glibc") "/lib"))
+                 (gcc-lib
+                  (string-append (assoc-ref %build-inputs "gcc:lib") "/lib")))
+            (mkdir-p out)
+            (invoke #$(file-append tar "/bin/tar")
+                    "-I" #$(file-append gzip "/bin/gzip")
+                    "-xf" source "-C" out "--strip-components=1")
+            ;; The bundle's node must not carry the FHS interpreter.
+            ;; patchelf 0.16.1 is pinned deliberately: 0.18.0 silently
+            ;; corrupts this 126 MB Node binary (segfault at startup) when
+            ;; it rewrites the RPATH.
+            (invoke (string-append (assoc-ref %build-inputs "patchelf")
+                                   "/bin/patchelf")
+                    "--set-interpreter"
+                    (string-append glibc-lib "/ld-linux-x86-64.so.2")
+                    "--set-rpath" (string-append glibc-lib ":" gcc-lib)
+                    (string-append out "/node"))))))
+    (inputs `(("glibc" ,glibc)
+              ("gcc:lib" ,gcc "lib")
+              ("tar" ,tar)
+              ("gzip" ,gzip)
+              ("patchelf" ,(specification->package "patchelf@0.16.1"))))
+    (supported-systems '("x86_64-linux"))
+    (home-page "https://code.visualstudio.com/")
+    (synopsis "VS Code Server for web and tunnel clients")
+    (description
+     "The commit-pinned VS Code Server bundle used by the desktop CLI's
+@code{serve-web} and @code{tunnel} subcommands, with its bundled Node.js
+runtime patched for Guix.")
     (license (nonfree "https://code.visualstudio.com/license"))))
