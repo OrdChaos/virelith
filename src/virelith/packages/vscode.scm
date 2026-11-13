@@ -55,8 +55,20 @@
       ;; Patch the ELF at VSCode-linux-x64/code: RPATH gets every build
       ;; input's /lib plus $out/opt/vscode/VSCode-linux-x64 for the
       ;; bundled libraries (libffmpeg.so, libEGL.so, ...).
+      ;;
+      ;; bin/code-tunnel is the standalone CLI behind the `serve-web` and
+      ;; `tunnel` subcommands.  cli.js spawns it as a child process, so an
+      ;; unpatched copy (upstream ships the FHS interpreter
+      ;; /lib64/ld-linux-x86-64.so.2) fails at exec with
+      ;; "spawn .../bin/code-tunnel ENOENT" before it can print any help.
+      ;; List it here so it gets the same interpreter and RPATH as `code`;
+      ;; it lives in opt/ rather than bin/, so the generic install-wrapper
+      ;; phase does not wrap it (no wrapper script that could confuse the
+      ;; CLI's own re-exec).
       #:wrapper-plan
       #~'(("opt/vscode/VSCode-linux-x64/code"
+           (("out" "/opt/vscode/VSCode-linux-x64")))
+          ("opt/vscode/VSCode-linux-x64/bin/code-tunnel"
            (("out" "/opt/vscode/VSCode-linux-x64"))))
       #:phases
       #~(modify-phases %standard-phases
