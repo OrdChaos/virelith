@@ -30,7 +30,10 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (nonguix build-system chromium-binary)
   #:use-module (nonguix licenses)
-  #:use-module (ice-9 match))
+  #:use-module (ice-9 match)
+  ;; 桌面与 server 的 release commit（消费者用它把 CLI 的
+  ;; ~/.vscode/cli/serve-web/<commit> 声明式指向本包的 server）。
+  #:export (%vscode-commit))
 
 ;; Bump VERSION/SHA256 together when updating the package.
 (define %vscode-version "1.145.2")
