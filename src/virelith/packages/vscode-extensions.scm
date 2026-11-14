@@ -269,10 +269,21 @@ evaluation time.  Ordering is deterministic (sorted by identifier)."
 (define* (vscode-with-extensions vscode extensions
                                  #:key
                                  (command-name "code")
-                                 (desktop-file-name "vscode.desktop"))
+                                 (desktop-file-name "vscode.desktop")
+                                 (web-commit #f))
   "Return a lightweight package wrapping VSCODE so that COMMAND-NAME runs
 with --extensions-dir pointing at the immutable collection built from
 EXTENSIONS.
+
+When WEB-COMMIT (a VS Code release commit id) is given, COMMAND-NAME also
+accepts the `serve-web-local' subcommand: it runs the official
+`serve-web' against the locally packaged server for that commit, with
+the connection token taken from $VSCODE_WEB_TOKEN_FILE, data under
+$VSCODE_WEB_DATA_DIR (default ~/.local/share/vscode-server), and
+$VSCODE_WEB_HOST/$VSCODE_WEB_PORT (default 0.0.0.0:8000).  This exists
+because Guix needs a patched server bundle: the CLI would otherwise
+download an FHS build that cannot exec.  Extra arguments are passed
+through to serve-web.
 
 The wrapper execs the base package's own launcher (preserving its
 environment, Electron/Wayland flags and GUI/CLI behaviour) and never
@@ -290,7 +301,10 @@ conflict is reported instead of a silently extension-less desktop launch."
       ;; Record the declared extension identifiers for tests and diagnostics.
       (properties `((vscode-extension-ids
                      . ,(map vscode-extension-package-id
-                             (validate-extension-set extensions)))))
+                             (validate-extension-set extensions)))
+                    ,@(if web-commit
+                          `((vscode-web-commit . ,web-commit))
+                          '())))
       (source #f)
       (build-system trivial-build-system)
       (inputs '())
@@ -311,11 +325,41 @@ conflict is reported instead of a silently extension-less desktop launch."
               (call-with-output-file command
                 (lambda (port)
                   (format port "#!~a~%" #$(file-append bash-minimal "/bin/sh"))
-                  (format port "exec '~a' --extensions-dir '~a' \"$@\"~%"
-                          #$(file-append vscode
-                                         (string-append "/bin/" command-name))
-                          #$(file-append extensions-dir
-                                         "/share/vscode/extensions"))))
+                  (let ((web-commit #$web-commit)
+                        (code #$(file-append vscode
+                                             (string-append "/bin/"
+                                                            command-name)))
+                        (exts #$(file-append extensions-dir
+                                             "/share/vscode/extensions")))
+                    (when web-commit
+                      (format port "if [ \"$1\" = serve-web-local ]; then~%")
+                      (format port "  shift~%")
+                      (format port "  commit='~a'~%" web-commit)
+                      (format port "  cache=\"${HOME}/.vscode/cli/serve-web/${commit}\"~%")
+                      (format port "  token=\"${VSCODE_WEB_TOKEN_FILE:-}\"~%")
+                      (format port "  data=\"${VSCODE_WEB_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/vscode-server}\"~%")
+                      (format port "  host=\"${VSCODE_WEB_HOST:-0.0.0.0}\"~%")
+                      (format port "  port=\"${VSCODE_WEB_PORT:-8000}\"~%")
+                      (format port "  if [ -z \"$token\" ] || [ ! -r \"$token\" ]; then~%")
+                      (format port "    echo 'code serve-web-local: VSCODE_WEB_TOKEN_FILE is unset or unreadable' >&2~%")
+                      (format port "    exit 1~%")
+                      (format port "  fi~%")
+                      (format port "  if [ ! -e \"$cache\" ]; then~%")
+                      (format port "    echo \"code serve-web-local: ${cache} is missing (run guix home reconfigure)\" >&2~%")
+                      (format port "    exit 1~%")
+                      (format port "  fi~%")
+                      (format port "  : > /tmp/vscode-skip-server-requirements-check 2>/dev/null || true~%")
+                      (format port (string-append
+                                    "  exec '~a' serve-web --commit-id \"$commit\""
+                                    " --connection-token-file \"$token\""
+                                    " --server-data-dir \"$data\""
+                                    " --host \"$host\" --port \"$port\""
+                                    " --accept-server-license-terms"
+                                    " --disable-telemetry \"$@\"~%")
+                              code)
+                      (format port "fi~%"))
+                    (format port "exec '~a' --extensions-dir '~a' \"$@\"~%"
+                            code exts))))
               (chmod command #o555))
             ;; Desktop integration: keep every field of the base entry
             ;; (flags, actions, WMClass, placeholders) and only retarget the
