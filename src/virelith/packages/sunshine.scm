@@ -290,6 +290,21 @@ bitstream API.  Sunshine links against these.")
               ;; available here.
               (setenv "BRANCH" "master")
               (setenv "BUILD_VERSION" #$%sunshine-version)))
+          (add-after 'install 'remove-desktop-files
+            (lambda* (#:key outputs #:allow-other-keys)
+              (use-modules (guix build utils))
+              ;; This configuration starts Sunshine from the shell; do not
+              ;; install any XDG menu entries.
+              (let ((out (assoc-ref outputs "out")))
+                (for-each (lambda (name)
+                            (let ((path (string-append out
+                                                       "/share/applications/"
+                                                       name)))
+                              (when (file-exists? path)
+                                (delete-file path))))
+                          '("dev.lizardbyte.app.Sunshine.desktop"
+                            "dev.lizardbyte.app.Sunshine.kwin.desktop"
+                            "dev.lizardbyte.app.Sunshine.terminal.desktop")))))
           (add-after 'configure 'install-web-ui
             (lambda _
               ;; cmake installs the vite output from the build directory.
