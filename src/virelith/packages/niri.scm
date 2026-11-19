@@ -20,14 +20,14 @@
 ;;; inherited unchanged; the package only differs by the patch.
 
 (define-module (virelith packages niri)
+  #:use-module ((gnu packages) #:select (search-patches))
   #:use-module (gnu packages window-management) ;niri
-  #:use-module (guix gexp) ;local-file
   #:use-module (guix packages) ;package、inherit
   #:export (niri-virtual-output))
 
 (define %niri-virtual-output-patch
-  (local-file "patches/niri-virtual-output.patch"
-              "niri-virtual-output.patch"))
+  (car (search-patches
+        "virelith/packages/patches/niri-virtual-output.patch")))
 
 (define-public niri-virtual-output
   (package

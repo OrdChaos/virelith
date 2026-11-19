@@ -109,5 +109,7 @@
 
 (test-equal "carapace library version" "1.17.2"
   (package-version go-github-com-carapace-sh-carapace))
+(test-equal "selfupdate module matches root lock" "0.1.0"
+  (package-version go-github-com-carapace-sh-carapace-selfupdate))
 
 (test-end "carapace")

@@ -270,7 +270,7 @@ tree is installed; carapace-bin compiles the packages it needs.")
 (define-public go-github-com-carapace-sh-carapace-selfupdate
   (package
     (name "go-github-com-carapace-sh-carapace-selfupdate")
-    (version "0.1.0-alpha")
+    (version "0.1.0")
     (source
      (origin
        (method git-fetch)
@@ -279,7 +279,7 @@ tree is installed; carapace-bin compiles the packages it needs.")
              (commit (string-append "v" version))))
        (file-name (git-file-name name version))
        (sha256
-         (base32 "0845xh0mg9jd9mfhm0iyrdksr21v6pwy1fw46n6rmpwiz6paql0h"))))
+        (base32 "1g8bddg893xvh0m3kmc28ja7gr8pw3440nm14fj73sf0hk1zz1jr"))))
     (build-system go-build-system)
     (arguments
      (list

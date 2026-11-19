@@ -1,7 +1,7 @@
 ;;; TLP with the profiles daemon (tlp-pd) for Virelith.
 
 ;; GNU Guix's tlp package runs "make install-tlp install-man-tlp" only,
-;; so the profiles daemon that ships in the same TLP 1.9 source is not
+;; so the profiles daemon that ships in the same TLP 1.11 source is not
 ;; produced: tlp-pd, tlpctl, tlp-pd.policy and the D-Bus system policy
 ;; files are left out.  tlp-pd implements the
 ;; org.freedesktop.UPower.PowerProfiles interface (plus the legacy
@@ -10,10 +10,10 @@
 ;; profiles are applied by running "tlp <profile>" and map to TLP's
 ;; _ON_AC / _ON_BAT / _ON_SAV settings.
 
-;; tlp-pd is a Python program (dbus-python + PyGObject).  Its shebang is
-;; rewritten to the Guix python, and it is wrapped with the build-time
-;; GUIX_PYTHONPATH and GI_TYPELIB_PATH so the dbus/gi modules and the
-;; GLib typelib are found at run time.  The wrapper also prepends the
+;; tlp-pd is a Python program using PyGObject's Gio/GLib bindings.  Its shebang
+;; is rewritten to the Guix python, and it is wrapped with the build-time
+;; GUIX_PYTHONPATH and GI_TYPELIB_PATH so the gi module and GLib typelib are
+;; found at run time.  The wrapper also prepends the
 ;; package's own sbin to PATH because tlp-pd applies profiles by
 ;; invoking the "tlp" executable.
 
@@ -26,7 +26,6 @@
   #:use-module (gnu packages glib)           ;python-pygobject
   #:use-module (gnu packages linux)          ;tlp
   #:use-module (gnu packages python)         ;python
-   #:use-module (gnu packages python-xyz)     ;python-dbus
    #:use-module (guix gexp)                   ;#~
    #:use-module (guix git-download)
    #:use-module (guix packages)               ;inherit、modify-inputs、package-arguments
@@ -37,7 +36,7 @@
   (package
      (inherit tlp)
      (name "tlp-with-pd")
-     (version "1.10.2")
+     (version "1.11.0")
      (source
       (origin
        (method git-fetch)
@@ -46,7 +45,7 @@
              (commit version)))
        (file-name (git-file-name name version))
        (sha256
-        (base32 "0ck41hfzlxk0403bq9im71dim2xjic0rvgkgjjmh5y49fzky057z"))))
+        (base32 "0apfwq0m25n9mkr3kzxxad59ckb3jfwm0r7mw9b4ddbb77hkgw8j"))))
      (synopsis "Power management tool with the TLP profiles daemon")
     (arguments
      (substitute-keyword-arguments (package-arguments tlp)
@@ -75,4 +74,4 @@
                    (list tlp-pd tlpctl)))))))))
     (inputs
      (modify-inputs (package-inputs tlp)
-       (append python python-dbus python-pygobject)))))
+       (append python python-pygobject)))))

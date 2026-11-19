@@ -36,11 +36,11 @@
   #:export (%vscode-commit))
 
 ;; Bump VERSION/SHA256 together when updating the package.
-(define %vscode-version "1.145.2")
+(define %vscode-version "1.147.0")
 (define %vscode-sha256
-  (base32 "18msrxvi7kdh0zkdjiy4bny96ywg84fq2jwlc3c6y0ps75k2h09v"))
+  (base32 "1g132341czpc7xn2r3c7n8s4rp7ki3r8ngc3njwdva7j013b3n3g"))
 ;; The commit id of the same release; used by vscode-server below.
-(define %vscode-commit "c4453f8ea430795f941c1b2ff6c9321135a74a02")
+(define %vscode-commit "8a14f0cc1b08d531eb83255ea3764ae22aa932b5")
 
 (define-public vscode
   (package
@@ -185,7 +185,7 @@ Nonguix Chromium binary build system.")
 ;;
 ;; %VSCODE-COMMIT must stay in sync with the desktop package above.
 (define %vscode-server-sha256
-  (base32 "024bigzwrfgrwnp7s5z3b73zww60wlyglrj6w6nvvpbfw7wa6qk9"))
+  (base32 "00di1rrmk2gaadgjv0srxcsbgv45xv0a3h138cfnafn8djqbccb5"))
 
 (define-public vscode-server
   (package

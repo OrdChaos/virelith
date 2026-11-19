@@ -21,6 +21,8 @@
   #:use-module (gnu packages gcc)  ; gcc
   #:export (pnpm))
 
+;; pnpm 12.18+ rejects DeepSeek Harness's upstream frozen lockfile as stale;
+;; keep 12.16.1 until that lockfile is regenerated compatibly upstream.
 (define-public pnpm
   (package
     (name "pnpm")

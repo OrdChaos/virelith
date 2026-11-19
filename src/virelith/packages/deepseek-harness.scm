@@ -12,6 +12,7 @@
 ;;; managed by Guix.
 
 (define-module (virelith packages deepseek-harness)
+  #:use-module ((gnu packages) #:select (search-patches))
   #:use-module (gnu packages bash) ;bash-minimal
   #:use-module (gnu packages gcc) ;gcc
   #:use-module (gnu packages node) ;node
@@ -27,15 +28,15 @@
   #:use-module (virelith packages pnpm-deps)
   #:export (deepseek-harness))
 
-(define %deepseek-harness-version "0.2.2-rc.1")
+(define %deepseek-harness-version "0.2.2-rc.5")
 (define %deepseek-harness-commit
-  "66491b05e3f05ad35bcdd4f6cd7ed26041d9e3db")
+  "9c2670d3bce5275e0d1610272958121af87787bb")
 (define %deepseek-harness-source-hash
-  (base32 "1wcrspmvfajhv8vk7d0rkhn16ha31bxb49lw4ncjh9v41f950rs1"))
+  (base32 "05a2c59jbf8r8pdx4gq71rl7a9fvfdc5492pvif7s9pwm4rf292f"))
 ;; Bump together with the source, pnpm, node, or bash-minimal version:
 ;; pnpm install shims embed those store paths and %pnpm-build-root.
 (define %deepseek-harness-node-modules-hash
-  (base32 "0d0sn2b49x9h7yyqvazs51p2hdbq0mjxgzk1iz0l35wkwxn8ashn"))
+  (base32 "03sgs6x82gcxynmwvq3gi25m16gi82x99b55i6mcg34ycpqaygl6"))
 
 (define %deepseek-harness-source
   (origin
@@ -47,7 +48,9 @@
                               %deepseek-harness-version
                               ".tar.gz"))
     (sha256 %deepseek-harness-source-hash)
-    (patches (list (local-file "patches/config-editor-home.patch")))))
+    (patches
+     (search-patches
+      "virelith/packages/patches/config-editor-home.patch"))))
 
 (define %deepseek-harness-node-modules
   (pnpm-install #:source %deepseek-harness-source
