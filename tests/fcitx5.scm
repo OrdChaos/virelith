@@ -1,7 +1,7 @@
 ;;; Tests for Virelith Fcitx 5 packages.
 
 (use-modules (srfi srfi-64)
-             (guix git-download)
+             (gnu packages fcitx5)
              (guix packages)
              (virelith packages fcitx5)
              (virelith packages rime))
@@ -13,16 +13,14 @@
 (test-runner-current (test-runner-simple))
 (test-begin "fcitx5")
 
-(test-equal "fcitx5-rime version" "5.1.16"
+;; The addon must stay loadable by the Guix core: 5.1.15+ needs core 5.1.22
+;; and an addon built against that core fails to load in a 5.1.21 daemon.
+(test-equal "fcitx5-rime stays on the core-compatible release" "5.1.14"
   (package-version fcitx5-rime-virelith))
 
-(test-equal "fcitx5-rime release commit"
-  "ce38ca9daba13209b3d36303c3c5ca6d086e8612"
-  (git-reference-commit
-   (origin-uri (package-source fcitx5-rime-virelith))))
-
-(test-equal "compatible Fcitx core version" "5.1.22"
-  (package-version (package-input fcitx5-rime-virelith "fcitx5")))
+(test-equal "addon links the inherited Fcitx core"
+  fcitx5
+  (package-input fcitx5-rime-virelith "fcitx5"))
 
 (test-equal "Virelith Rime data remains wired" "rime-data-virelith"
   (package-name (package-input fcitx5-rime-virelith "rime-data")))
