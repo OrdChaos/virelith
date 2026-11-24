@@ -33,10 +33,12 @@
   "9c2670d3bce5275e0d1610272958121af87787bb")
 (define %deepseek-harness-source-hash
   (base32 "05a2c59jbf8r8pdx4gq71rl7a9fvfdc5492pvif7s9pwm4rf292f"))
-;; Bump together with the source, pnpm, node, or bash-minimal version:
-;; pnpm install shims embed those store paths and %pnpm-build-root.
+;; Bump together with the source, pnpm, node, or bash-minimal version, and
+;; after any channel update that rebuilds them: pnpm install shims embed those
+;; store paths (plus %pnpm-build-root), so a new node/pnpm derivation changes
+;; the tree even when its version string is unchanged.
 (define %deepseek-harness-node-modules-hash
-  (base32 "03sgs6x82gcxynmwvq3gi25m16gi82x99b55i6mcg34ycpqaygl6"))
+  (base32 "008a0hd7wqsfc2hnq5my3lqp07n28v5dymgwy9aksrr6izv6qi1q"))
 
 (define %deepseek-harness-source
   (origin
