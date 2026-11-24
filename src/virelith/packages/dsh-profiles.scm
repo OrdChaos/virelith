@@ -12,6 +12,11 @@
 ;;; hash makes the result reproducible.  The generated lockfile stays in the
 ;;; store artifact for inspection.  If no external descriptors are present, the
 ;;; entire pnpm path is skipped.
+;;;
+;;; Launchers are normalized when the profile is assembled, not while the
+;;; closure is hashed, so SPECS-HASH depends on the source tree and pnpm's
+;;; resolution only -- not on the node/bash store paths a channel update may
+;;; change.
 
 (define-module (virelith packages dsh-profiles)
   #:use-module (gnu packages base) ;coreutils
@@ -316,6 +321,10 @@ peer imports share the launching DSH runtime instead of a second copy."
                                     #:follow-symlinks? #f)
                   (invoke #$(file-append coreutils "/bin/chmod")
                           "-R" "u+w" node-modules)
+                  ;; The closure keeps pnpm's and the bundles' upstream
+                  ;; shebangs so its hash does not embed toolchain store
+                  ;; paths; point them at this profile's node here.
+                  (invoke #$(pnpm-shim-normalizer) node-modules)
                   ;; pnpm shims embed the fixed install root; retarget them
                   ;; to the immutable profile artifact.
                   (for-each

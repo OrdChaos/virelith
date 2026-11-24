@@ -107,6 +107,14 @@ the bundle's dependency closure."
         #~'(("./" #$(string-append install-root)))
         #:phases
         #~(modify-phases %standard-phases
+            ;; Install the npm payload verbatim.  Patching shebangs here would
+            ;; embed the node store path in the bundle, and profiles vendor this
+            ;; tree into their fixed-output pnpm closure; the consuming profile
+            ;; normalizes launchers instead (see pnpm-shim-normalizer).  Both
+            ;; shebang phases must go: with no build phase, the "generated
+            ;; files" phase also scans the unpacked tarball.
+            (delete 'patch-source-shebangs)
+            (delete 'patch-generated-file-shebangs)
             (replace 'unpack
               (lambda* (#:key source #:allow-other-keys)
                 (invoke "tar" "xzf" source)

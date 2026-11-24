@@ -10,8 +10,13 @@
 ;;; path.  The consuming package materializes the tree at the same path, so
 ;;; build-time shims work; the install phase rewrites them to the store path.
 ;;; pnpm's per-install metadata files (which carry timestamps) are removed.
-;;; Shim shebangs and `command -p' are made Guix-compatible before hashing so
-;;; the same tree works in the build sandbox and after installation.
+;;;
+;;; Shebangs are deliberately left as pnpm wrote them.  Rewriting them inside
+;;; the fixed output would bake the node/bash store paths into the pinned hash,
+;;; so every channel update that rebuilds those packages would invalidate it
+;;; even when no version changed.  Consumers instead run
+;;; PNPM-SHIM-NORMALIZER on the materialized tree, right before using or
+;;; installing it.
 
 (define-module (virelith packages pnpm-deps)
   #:use-module (gnu packages base) ;tar
@@ -25,6 +30,7 @@
   #:use-module (ice-9 match)
   #:use-module (virelith packages nodejs) ;pnpm
   #:export (%pnpm-build-root
+            pnpm-shim-normalizer
             pnpm-install-method
             pnpm-install
             pnpm-closure-method
@@ -34,6 +40,49 @@
 ;; hash depends on it.  The consuming package must build at the same path.
 (define %pnpm-build-root "/tmp/guix-dsh-build")
 
+(define* (pnpm-shim-normalizer #:key (node node) (bash bash-minimal))
+  "Return an executable that makes pnpm launchers under its first command-line
+argument usable in Guix environments.  Launchers in `.bin' directories get
+Guix shebangs and lose the `command -p' fallback; shebang scripts in other
+`bin' directories, such as vendored bundle launchers, only get Guix shebangs.
+Running this outside the fixed-output derivations keeps their hashes
+independent of the node and bash store paths."
+  (program-file
+   "normalize-pnpm-shims"
+   (with-imported-modules '((guix build utils))
+     #~(begin
+       (use-modules (guix build utils))
+       (define (regular-shebang? file stat)
+         ;; Symlinks are filtered by FIND-FILES' LSTAT: never rewrite through
+         ;; them.  Only files that really start with `#!' are touched, so
+         ;; binary payloads under a bin/ directory stay intact.
+         (and (eq? 'regular (stat:type stat))
+              (call-with-input-file file
+                (lambda (port)
+                  (and (eqv? (read-char port) #\#)
+                       (eqv? (read-char port) #\!))))))
+       (let ((args (command-line)))
+         (unless (= 2 (length args))
+           (error "usage: normalize-pnpm-shims ROOT" args))
+         (let ((root (cadr args))
+               (node #$(file-append node "/bin/node"))
+               (sh #$(file-append bash "/bin/sh"))
+               (bash #$(file-append bash "/bin/bash")))
+           (for-each
+            (lambda (file)
+              (substitute* file
+                (("#!/bin/sh") (string-append "#!" sh))
+                (("#!/usr/bin/env node") (string-append "#!" node))
+                (("#!/usr/bin/env bash") (string-append "#!" bash))))
+            (find-files root regular-shebang?))
+           (for-each
+            (lambda (file)
+              (substitute* file (("command -p ") "")))
+            (find-files root
+                        (lambda (file stat)
+                          (and (regular-shebang? file stat)
+                               (string-contains file "/.bin/")))))))))))
+
 (define* (pnpm-install-method uri hash-algo hash
                               #:optional (name "pnpm-node-modules")
                               #:key (system (%current-system))
@@ -41,8 +90,9 @@
   "Return a fixed-output derivation containing SOURCE after a frozen-lockfile
 pnpm install of URI, a (SOURCE LOCKFILE WORKSPACE PNPM NODE) tuple.  SOURCE is
 a tarball or a directory; LOCKFILE and WORKSPACE are relative names.  The
-install runs in %PNPM-BUILD-ROOT; per-install metadata is removed and pnpm
-shims are made Guix-compatible before the tree is hashed."
+install runs in %PNPM-BUILD-ROOT; per-install metadata is removed.  Shebangs
+are left untouched so the hash does not embed toolchain store paths; consumers
+normalize them with PNPM-SHIM-NORMALIZER."
   (match uri
     ((source lockfile workspace pnpm node root)
      (unless (and (string? lockfile)
@@ -112,25 +162,6 @@ shims are made Guix-compatible before the tree is hashed."
                                  (string-append
                                   root
                                   "/node_modules/.pnpm-workspace-state-v1.json")))
-                 ;; Make pnpm shims usable without an FHS /bin/sh or a
-                 ;; compiled-in `command -p' default path.
-                 (for-each
-                  (lambda (file)
-                    (substitute* file
-                      (("#!/bin/sh")
-                       (string-append "#!"
-                                      #$(file-append bash-minimal "/bin/sh")))
-                      (("#!/usr/bin/env node")
-                       (string-append "#!"
-                                      #$(file-append node "/bin/node")))
-                      (("#!/usr/bin/env bash")
-                       (string-append "#!"
-                                      #$(file-append bash-minimal "/bin/bash")))
-                      (("command -p ") "")))
-                  (find-files root
-                              (lambda (file stat)
-                                (and (eq? 'regular (stat:type stat))
-                                     (string-contains file "/.bin/")))))
                  (copy-recursively root #$output
                                    #:follow-symlinks? #f))))
          #:system system
@@ -202,23 +233,6 @@ only by the recursive output hash."
                                  (string-append
                                   root
                                   "/node_modules/.pnpm-workspace-state-v1.json")))
-                 (for-each
-                  (lambda (file)
-                    (substitute* file
-                      (("#!/bin/sh")
-                       (string-append "#!"
-                                      #$(file-append bash-minimal "/bin/sh")))
-                      (("#!/usr/bin/env node")
-                       (string-append "#!"
-                                      #$(file-append node "/bin/node")))
-                      (("#!/usr/bin/env bash")
-                       (string-append "#!"
-                                      #$(file-append bash-minimal "/bin/bash")))
-                      (("command -p ") "")))
-                  (find-files root
-                              (lambda (file stat)
-                                (and (eq? 'regular (stat:type stat))
-                                     (string-contains file "/.bin/")))))
                  (copy-recursively root #$output
                                    #:follow-symlinks? #f))))
          #:system system

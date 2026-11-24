@@ -33,12 +33,13 @@
   "9c2670d3bce5275e0d1610272958121af87787bb")
 (define %deepseek-harness-source-hash
   (base32 "05a2c59jbf8r8pdx4gq71rl7a9fvfdc5492pvif7s9pwm4rf292f"))
-;; Bump together with the source, pnpm, node, or bash-minimal version, and
-;; after any channel update that rebuilds them: pnpm install shims embed those
-;; store paths (plus %pnpm-build-root), so a new node/pnpm derivation changes
-;; the tree even when its version string is unchanged.
+;; Bump together with the source or the pnpm version: the hashed tree contains
+;; the shims pnpm writes (plus %pnpm-build-root).  Node and bash store paths
+;; are not part of it -- the build normalizes shebangs outside the hash (see
+;; PNPM-SHIM-NORMALIZER), so a channel update that only rebuilds them no
+;; longer invalidates this value.
 (define %deepseek-harness-node-modules-hash
-  (base32 "008a0hd7wqsfc2hnq5my3lqp07n28v5dymgwy9aksrr6izv6qi1q"))
+  (base32 "0bg8hi87vnf223aw640kgl8bp17zvbg1xgc3pzqr3jqgic7092y2"))
 
 (define %deepseek-harness-source
   (origin
@@ -91,6 +92,10 @@
                                   root
                                   #:follow-symlinks? #f)
                 (invoke "chmod" "-R" "u+w" root)
+                ;; The fixed tree keeps pnpm's own shebangs so its hash does
+                ;; not embed toolchain store paths; make them Guix-compatible
+                ;; here, before any build script runs.
+                (invoke #$(pnpm-shim-normalizer) root)
                 (chdir root)
                 ;; The pinned pnpm closure is built from the patched source,
                 ;; so the build root already contains config-editor-home.patch.
